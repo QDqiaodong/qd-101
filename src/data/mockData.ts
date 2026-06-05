@@ -219,6 +219,12 @@ export let mockRegistrations: Registration[] = [
     userId: mockUser.id,
     registeredAt: '2025-01-17T10:00:00',
   },
+  {
+    id: 'reg-3',
+    activityId: 'act-9',
+    userId: mockUser.id,
+    registeredAt: '2025-01-17T10:00:00',
+  },
 ]
 
 export let activities = [...mockActivities]

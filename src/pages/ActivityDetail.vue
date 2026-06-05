@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
-import { getActivityById, registerActivity, cancelRegistration, checkRegistration, type Activity } from '@/api/index'
+import { getActivityById, registerActivity, cancelRegistration, checkRegistration, getRegisteredActivities, type Activity } from '@/api/index'
+import { matchDistrictByLocation } from '@/data/locationData'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +16,66 @@ const isRegistered = ref(false)
 const isFull = ref(false)
 const isCreator = ref(false)
 const loading = ref(true)
+const registeredActivities = ref<Activity[]>([])
+const showConflictWarning = ref(false)
+const showCloseTimeWarning = ref(false)
+
+interface TimeConflict {
+  type: 'overlap' | 'close_time'
+  activity: Activity
+  message: string
+  minutesDiff: number
+}
+
+const timeConflicts = computed<TimeConflict[]>(() => {
+  if (!activity.value || registeredActivities.value.length === 0) return []
+  
+  const conflicts: TimeConflict[] = []
+  const currentActivityTime = new Date(activity.value.time)
+  const currentActivityEnd = new Date(currentActivityTime.getTime() + 2 * 60 * 60 * 1000)
+  
+  registeredActivities.value.forEach(registered => {
+    if (registered.id === activity.value!.id) return
+    
+    const registeredTime = new Date(registered.time)
+    const registeredEnd = new Date(registeredTime.getTime() + 2 * 60 * 60 * 1000)
+    
+    if (currentActivityTime < registeredEnd && currentActivityEnd > registeredTime) {
+      const overlapStart = new Date(Math.max(currentActivityTime.getTime(), registeredTime.getTime()))
+      const overlapEnd = new Date(Math.min(currentActivityEnd.getTime(), registeredEnd.getTime()))
+      const overlapMinutes = Math.round((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60))
+      
+      conflicts.push({
+        type: 'overlap',
+        activity: registered,
+        message: `与「${registered.title}」时间重叠约 ${overlapMinutes} 分钟`,
+        minutesDiff: overlapMinutes
+      })
+    } else {
+      const diffMinutes = Math.abs(currentActivityTime.getTime() - registeredEnd.getTime()) / (1000 * 60)
+      if (diffMinutes < 60 && diffMinutes > 0) {
+        const isAfter = currentActivityTime > registeredEnd
+        conflicts.push({
+          type: 'close_time',
+          activity: registered,
+          message: isAfter 
+            ? `「${registered.title}」结束后仅 ${Math.round(diffMinutes)} 分钟开始，返程时间紧张`
+            : `开始时间比「${registered.title}」仅早 ${Math.round(diffMinutes)} 分钟`,
+          minutesDiff: Math.round(diffMinutes)
+        })
+      }
+    }
+  })
+  
+  return conflicts
+})
+
+const hasConflict = computed(() => timeConflicts.value.length > 0)
+
+const district = computed(() => {
+  if (!activity.value) return null
+  return matchDistrictByLocation(activity.value.location, activity.value.city)
+})
 
 const getTypeColor = (type: string) => {
   const colors: Record<string, string> = {
@@ -35,6 +96,7 @@ async function loadActivity() {
     isRegistered.value = await checkRegistration(activityId, CURRENT_USER_ID)
     isFull.value = activity.value.currentParticipants >= activity.value.maxParticipants
     isCreator.value = activity.value.creatorId === CURRENT_USER_ID
+    registeredActivities.value = await getRegisteredActivities(CURRENT_USER_ID)
   } catch (error) {
     console.error('Failed to load activity:', error)
   } finally {
@@ -93,10 +155,55 @@ onMounted(() => {
           <img :src="activity.image" :alt="activity.title" class="w-full h-full object-cover" />
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
           <div class="absolute bottom-6 left-6 right-6">
-            <span :class="['px-4 py-1.5 rounded-full text-sm font-medium', getTypeColor(activity.type)]">
-              {{ activity.type }}
-            </span>
+            <div class="flex flex-wrap gap-2">
+              <span :class="['px-4 py-1.5 rounded-full text-sm font-medium', getTypeColor(activity.type)]">
+                {{ activity.type }}
+              </span>
+              <span v-if="district" class="px-4 py-1.5 rounded-full text-sm font-medium bg-white/90 text-gray-700">
+                {{ district.name }} ({{ district.type }})
+              </span>
+            </div>
             <h1 class="text-2xl md:text-3xl font-bold text-white mt-3">{{ activity.title }}</h1>
+          </div>
+        </div>
+        
+        <div v-if="hasConflict && !isRegistered" class="p-6 bg-gradient-to-r from-red-50 to-orange-50 border-b border-red-100">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="font-semibold text-red-800 mb-2">⚠️ 时间冲突提醒</h3>
+              <p class="text-sm text-red-700 mb-3">您已报名的活动与该活动存在以下时间冲突：</p>
+              <div class="space-y-2">
+                <div 
+                  v-for="(conflict, index) in timeConflicts" 
+                  :key="index"
+                  :class="[
+                    'p-3 rounded-lg text-sm flex items-center justify-between',
+                    conflict.type === 'overlap' ? 'bg-red-100' : 'bg-orange-100'
+                  ]"
+                >
+                  <div class="flex-1">
+                    <span :class="conflict.type === 'overlap' ? 'text-red-700' : 'text-orange-700'">
+                      {{ conflict.type === 'overlap' ? '⏰ 时间重叠' : '⚡ 返程紧张' }}
+                    </span>
+                    <p class="text-gray-700 mt-1">{{ conflict.message }}</p>
+                    <p class="text-gray-500 text-xs mt-1">
+                      {{ conflict.activity.title }} · {{ new Date(conflict.activity.time).toLocaleString('zh-CN') }}
+                    </p>
+                  </div>
+                  <button 
+                    @click="$router.push(`/activity/${conflict.activity.id}`)"
+                    class="ml-4 text-xs text-primary hover:underline flex-shrink-0"
+                  >
+                    查看详情
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         

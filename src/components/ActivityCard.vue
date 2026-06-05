@@ -1,12 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Activity } from '@/api/index'
+import { matchDistrictByLocation, type BusinessDistrict } from '@/data/locationData'
 
 const props = defineProps<{
   activity: Activity
 }>()
 
 const router = useRouter()
+
+const district = computed<BusinessDistrict | null>(() => {
+  return matchDistrictByLocation(props.activity.location, props.activity.city)
+})
+
+const convenienceLabel = computed(() => {
+  if (!district.value) return null
+  const score = district.value.convenienceScore
+  if (score >= 90) return { text: '极便利', color: 'text-green-600 bg-green-100' }
+  if (score >= 80) return { text: '很便利', color: 'text-blue-600 bg-blue-100' }
+  if (score >= 70) return { text: '较便利', color: 'text-yellow-600 bg-yellow-100' }
+  return null
+})
 
 const getTypeColor = (type: string) => {
   const colors: Record<string, string> = {
@@ -32,9 +47,12 @@ const getTypeColor = (type: string) => {
         :alt="activity.title"
         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
       />
-      <div class="absolute top-3 left-3">
+      <div class="absolute top-3 left-3 flex flex-wrap gap-2">
         <span :class="['px-3 py-1 rounded-full text-sm font-medium', getTypeColor(activity.type)]">
           {{ activity.type }}
+        </span>
+        <span v-if="district" class="px-3 py-1 rounded-full text-sm font-medium bg-white/90 text-gray-700">
+          {{ district.name }}
         </span>
       </div>
       <div class="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded-lg text-sm flex items-center gap-1">

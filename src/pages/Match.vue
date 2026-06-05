@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import { getActivities, type Activity } from '@/api/index'
 import { mockActivities } from '@/data/mockData'
+import { getDistrictsByCity, convenienceOptions, matchDistrictByLocation, type BusinessDistrict } from '@/data/locationData'
+import { allCities } from '@/data/cities'
 
 const router = useRouter()
 
@@ -17,6 +19,19 @@ const distanceOptions = [
   { value: 20, label: '20公里内' },
   { value: 999, label: '不限' }
 ]
+
+const selectedCity = ref('北京')
+const selectedDistrict = ref('')
+const selectedConvenience = ref(0)
+
+const availableDistricts = computed(() => {
+  if (!selectedCity.value) return []
+  return getDistrictsByCity(selectedCity.value)
+})
+
+const getActivityDistrict = (activity: Activity): BusinessDistrict | null => {
+  return matchDistrictByLocation(activity.location, activity.city)
+}
 
 const selectedSlots = ref<Record<string, string[]>>({})
 const selectedTypes = ref<string[]>([])
@@ -83,6 +98,24 @@ const matchCandidates = computed<MatchCandidate[]>(() => {
   const candidates: MatchCandidate[] = []
   
   activities.value.forEach(activity => {
+    if (selectedCity.value && activity.city !== selectedCity.value) {
+      return
+    }
+    
+    if (selectedDistrict.value) {
+      const district = getActivityDistrict(activity)
+      if (district?.name !== selectedDistrict.value) {
+        return
+      }
+    }
+    
+    if (selectedConvenience.value > 0) {
+      const district = getActivityDistrict(activity)
+      if (!district || district.convenienceScore < selectedConvenience.value) {
+        return
+      }
+    }
+    
     if (selectedTypes.value.length > 0 && !selectedTypes.value.includes(activity.type)) {
       return
     }
@@ -193,6 +226,9 @@ function resetSelection() {
   })
   selectedTypes.value = []
   selectedDistance.value = 10
+  selectedCity.value = '北京'
+  selectedDistrict.value = ''
+  selectedConvenience.value = 0
 }
 
 onMounted(() => {
@@ -260,6 +296,76 @@ onMounted(() => {
                   ]"
                 >
                   {{ type }}
+                </button>
+              </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-100">
+              <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span class="text-xl">🏙️</span>
+                城市
+              </h2>
+              <select 
+                v-model="selectedCity"
+                class="w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option v-for="city in allCities" :key="city" :value="city">{{ city }}</option>
+              </select>
+            </div>
+            
+            <div v-if="availableDistricts.length > 0" class="mt-6 pt-6 border-t border-gray-100">
+              <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span class="text-xl">🏢</span>
+                商圈/片区
+              </h2>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  @click="selectedDistrict = ''"
+                  :class="[
+                    'px-3 py-1.5 rounded-full transition-all text-xs font-medium',
+                    !selectedDistrict
+                      ? 'bg-primary text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ]"
+                >
+                  全部
+                </button>
+                <button
+                  v-for="district in availableDistricts"
+                  :key="district.id"
+                  @click="selectedDistrict = district.name"
+                  :class="[
+                    'px-3 py-1.5 rounded-full transition-all text-xs font-medium',
+                    selectedDistrict === district.name
+                      ? 'bg-primary text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ]"
+                >
+                  {{ district.name }}
+                  <span class="ml-1 opacity-70">({{ district.type }})</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-100">
+              <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span class="text-xl">🚇</span>
+                交通便利度
+              </h2>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="option in convenienceOptions"
+                  :key="option.value"
+                  @click="selectedConvenience = option.value"
+                  :class="[
+                    'px-3 py-1.5 rounded-full transition-all text-xs font-medium',
+                    selectedConvenience === option.value
+                      ? 'bg-primary text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ]"
+                  :title="option.description"
+                >
+                  {{ option.label }}
                 </button>
               </div>
             </div>

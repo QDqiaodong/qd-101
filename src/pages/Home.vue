@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import Navbar from '@/components/Navbar.vue'
 import ActivityCard from '@/components/ActivityCard.vue'
 import { getActivities, getHotActivities, type Activity } from '@/api/index'
 import { allCities } from '@/data/cities'
+import { getDistrictsByCity, convenienceOptions, matchDistrictByLocation, type BusinessDistrict } from '@/data/locationData'
 
 const selectedCity = ref('')
+const selectedDistrict = ref('')
+const selectedDistrictType = ref('')
+const selectedConvenience = ref(0)
 const selectedType = ref('')
 const sortBy = ref('newest')
 const activities = ref<Activity[]>([])
@@ -14,6 +18,26 @@ const loading = ref(true)
 
 const activityTypes = ['聚餐', '徒步', '打球', '探店', '桌游', '其他']
 
+const availableDistricts = computed(() => {
+  if (!selectedCity.value) return []
+  return getDistrictsByCity(selectedCity.value)
+})
+
+const districtTypes = computed(() => {
+  const types = new Set<string>()
+  availableDistricts.value.forEach(d => types.add(d.type))
+  return Array.from(types)
+})
+
+const filteredDistricts = computed(() => {
+  if (!selectedDistrictType.value) return availableDistricts.value
+  return availableDistricts.value.filter(d => d.type === selectedDistrictType.value)
+})
+
+const getActivityDistrict = (activity: Activity): BusinessDistrict | null => {
+  return matchDistrictByLocation(activity.location, activity.city)
+}
+
 const filteredActivities = computed(() => {
   let result = [...activities.value]
   
@@ -21,11 +45,30 @@ const filteredActivities = computed(() => {
     result = result.filter(a => a.city === selectedCity.value)
   }
   
+  if (selectedDistrict.value) {
+    result = result.filter(a => {
+      const district = getActivityDistrict(a)
+      return district?.name === selectedDistrict.value
+    })
+  }
+  
+  if (selectedConvenience.value > 0) {
+    result = result.filter(a => {
+      const district = getActivityDistrict(a)
+      return district && district.convenienceScore >= selectedConvenience.value
+    })
+  }
+  
   if (selectedType.value) {
     result = result.filter(a => a.type === selectedType.value)
   }
   
   return result
+})
+
+watch(selectedCity, () => {
+  selectedDistrict.value = ''
+  selectedDistrictType.value = ''
 })
 
 async function loadActivities() {
@@ -49,30 +92,65 @@ onMounted(() => {
   <div class="min-h-screen bg-gray-50">
     <Navbar />
     
-    <div class="bg-gradient-to-r from-primary via-orange-400 to-orange-500 py-16">
+    <div class="bg-gradient-to-r from-primary via-orange-400 to-orange-500 py-12">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h1 class="text-4xl font-bold text-white mb-4">发现身边的精彩活动</h1>
         <p class="text-white/90 text-lg mb-8">和志同道合的朋友一起，探索城市的无限可能</p>
-        <div class="max-w-2xl mx-auto">
+        <div class="max-w-4xl mx-auto">
           <div class="flex gap-3 flex-wrap justify-center">
             <select 
               v-model="selectedCity"
               @change="loadActivities"
-              class="px-4 py-3 rounded-xl bg-white/95 text-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[150px]"
+              class="px-4 py-3 rounded-xl bg-white/95 text-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[140px]"
             >
               <option value="">全部城市</option>
               <option v-for="city in allCities" :key="city" :value="city">{{ city }}</option>
             </select>
             
             <select 
+              v-if="selectedCity && districtTypes.length > 0"
+              v-model="selectedDistrictType"
+              class="px-4 py-3 rounded-xl bg-white/95 text-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[140px]"
+            >
+              <option value="">全部类型</option>
+              <option v-for="type in districtTypes" :key="type" :value="type">{{ type }}</option>
+            </select>
+            
+            <select 
+              v-if="selectedCity && filteredDistricts.length > 0"
+              v-model="selectedDistrict"
+              class="px-4 py-3 rounded-xl bg-white/95 text-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[140px]"
+            >
+              <option value="">全部商圈/片区</option>
+              <option v-for="district in filteredDistricts" :key="district.id" :value="district.name">
+                {{ district.name }}
+              </option>
+            </select>
+            
+            <select 
+              v-if="selectedCity"
+              v-model="selectedConvenience"
+              class="px-4 py-3 rounded-xl bg-white/95 text-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[140px]"
+            >
+              <option v-for="option in convenienceOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+            
+            <select 
               v-model="sortBy"
               @change="loadActivities"
-              class="px-4 py-3 rounded-xl bg-white/95 text-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[150px]"
+              class="px-4 py-3 rounded-xl bg-white/95 text-gray-700 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-[140px]"
             >
               <option value="newest">最新发布</option>
               <option value="popular">浏览最多</option>
               <option value="hot">报名最火</option>
             </select>
+          </div>
+          <div v-if="selectedCity" class="mt-4 flex gap-2 justify-center flex-wrap text-white/80 text-sm">
+            <span v-if="selectedDistrictType">📍 类型: {{ selectedDistrictType }}</span>
+            <span v-if="selectedDistrict">🏢 区域: {{ selectedDistrict }}</span>
+            <span v-if="selectedConvenience > 0">🚇 便利度: {{ convenienceOptions.find(o => o.value === selectedConvenience)?.label }}</span>
           </div>
         </div>
       </div>

@@ -1,3 +1,6 @@
+import { mockActivities, mockRegistrations } from '@/data/mockData'
+import type { Activity as MockActivity } from '@/types'
+
 const BASE_URL = '/api'
 
 export interface Activity {
@@ -24,37 +27,69 @@ export interface ApiResponse<T> {
   data: T
 }
 
+function convertMockActivity(mock: MockActivity): Activity {
+  return {
+    ...mock,
+    id: parseInt(mock.id.replace('act-', '')),
+    creatorId: parseInt(mock.creatorId.replace('user-', '')),
+    creatorName: '活动发起者',
+  }
+}
+
 export async function getActivities(
   city?: string,
   type?: string,
   sortBy: string = 'newest'
 ): Promise<Activity[]> {
-  const params = new URLSearchParams()
-  if (city) params.set('city', city)
-  if (type) params.set('type', type)
-  params.set('sortBy', sortBy)
-  
-  const response = await fetch(`${BASE_URL}/activities?${params}`)
-  const result: ApiResponse<Activity[]> = await response.json()
-  return result.data
+  try {
+    const params = new URLSearchParams()
+    if (city) params.set('city', city)
+    if (type) params.set('type', type)
+    params.set('sortBy', sortBy)
+    
+    const response = await fetch(`${BASE_URL}/activities?${params}`)
+    const result: ApiResponse<Activity[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for activities')
+    return mockActivities.map(convertMockActivity)
+  }
 }
 
 export async function getActivityById(id: number): Promise<Activity> {
-  const response = await fetch(`${BASE_URL}/activities/${id}`)
-  const result: ApiResponse<Activity> = await response.json()
-  return result.data
+  try {
+    const response = await fetch(`${BASE_URL}/activities/${id}`)
+    const result: ApiResponse<Activity> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for activity detail')
+    const mock = mockActivities.find(a => parseInt(a.id.replace('act-', '')) === id) || mockActivities[0]
+    return convertMockActivity(mock)
+  }
 }
 
 export async function getHotActivities(): Promise<Activity[]> {
-  const response = await fetch(`${BASE_URL}/activities/hot`)
-  const result: ApiResponse<Activity[]> = await response.json()
-  return result.data
+  try {
+    const response = await fetch(`${BASE_URL}/activities/hot`)
+    const result: ApiResponse<Activity[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for hot activities')
+    return mockActivities.slice(0, 5).map(convertMockActivity)
+  }
 }
 
 export async function getActivitiesByCreator(creatorId: number): Promise<Activity[]> {
-  const response = await fetch(`${BASE_URL}/activities/creator/${creatorId}`)
-  const result: ApiResponse<Activity[]> = await response.json()
-  return result.data
+  try {
+    const response = await fetch(`${BASE_URL}/activities/creator/${creatorId}`)
+    const result: ApiResponse<Activity[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for creator activities')
+    return mockActivities
+      .filter(a => parseInt(a.creatorId.replace('user-', '')) === creatorId)
+      .map(convertMockActivity)
+  }
 }
 
 export async function createActivity(data: {
@@ -81,29 +116,55 @@ export async function createActivity(data: {
 }
 
 export async function registerActivity(activityId: number, userId: number): Promise<void> {
-  await fetch(`${BASE_URL}/registrations`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ activityId, userId }),
-  })
+  try {
+    await fetch(`${BASE_URL}/registrations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ activityId, userId }),
+    })
+  } catch (error) {
+    console.log('Mock registration successful')
+  }
 }
 
 export async function cancelRegistration(activityId: number, userId: number): Promise<void> {
-  await fetch(`${BASE_URL}/registrations?activityId=${activityId}&userId=${userId}`, {
-    method: 'DELETE',
-  })
+  try {
+    await fetch(`${BASE_URL}/registrations?activityId=${activityId}&userId=${userId}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    console.log('Mock cancellation successful')
+  }
 }
 
 export async function checkRegistration(activityId: number, userId: number): Promise<boolean> {
-  const response = await fetch(`${BASE_URL}/registrations/check?activityId=${activityId}&userId=${userId}`)
-  const result: ApiResponse<boolean> = await response.json()
-  return result.data
+  try {
+    const response = await fetch(`${BASE_URL}/registrations/check?activityId=${activityId}&userId=${userId}`)
+    const result: ApiResponse<boolean> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for registration check')
+    return mockRegistrations.some(
+      r => parseInt(r.activityId.replace('act-', '')) === activityId && 
+           parseInt(r.userId.replace('user-', '')) === userId
+    )
+  }
 }
 
 export async function getRegisteredActivities(userId: number): Promise<Activity[]> {
-  const response = await fetch(`${BASE_URL}/registrations/user/${userId}`)
-  const result: ApiResponse<Activity[]> = await response.json()
-  return result.data
+  try {
+    const response = await fetch(`${BASE_URL}/registrations/user/${userId}`)
+    const result: ApiResponse<Activity[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for registered activities')
+    const registeredIds = mockRegistrations
+      .filter(r => parseInt(r.userId.replace('user-', '')) === userId)
+      .map(r => r.activityId)
+    return mockActivities
+      .filter(a => registeredIds.includes(a.id))
+      .map(convertMockActivity)
+  }
 }
