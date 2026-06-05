@@ -122,6 +122,30 @@ public class ActivityServiceImpl implements ActivityService {
     }
     
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "hot_activities", key = "'top5:' + #timeRange")
+    public List<ActivityResponse> getHotActivities(String timeRange) {
+        List<Activity> activities;
+        LocalDateTime startTime = switch (timeRange) {
+            case "realtime" -> LocalDateTime.now().minusHours(24);
+            case "3days" -> LocalDateTime.now().minusDays(3);
+            case "7days" -> LocalDateTime.now().minusDays(7);
+            default -> null;
+        };
+        
+        if (startTime != null) {
+            activities = activityRepository.findHotActivitiesSince(startTime);
+        } else {
+            activities = activityRepository.findAllOrderByParticipantsDesc();
+        }
+        
+        return activities.stream()
+                .limit(5)
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
     @Transactional
     @CacheEvict(value = {"activity_detail", "activities", "hot_activities"}, allEntries = true)
     public void incrementViews(Long id) {

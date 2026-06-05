@@ -14,5 +14,6 @@ public interface ActivityService {
     List<ActivityResponse> getActivitiesByCityAndType(String city, String type, String sortBy);
     List<ActivityResponse> getActivitiesByCreator(Long creatorId);
     List<ActivityResponse> getHotActivities();
+    List<ActivityResponse> getHotActivities(String timeRange);
     void incrementViews(Long id);
 }

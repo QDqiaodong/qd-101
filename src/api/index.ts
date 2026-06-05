@@ -36,6 +36,25 @@ function convertMockActivity(mock: MockActivity): Activity {
   }
 }
 
+function getMockHotActivities(timeRange: string): Activity[] {
+  const allActivities = [...mockActivities].map(convertMockActivity)
+  
+  const now = new Date()
+  let filtered = allActivities
+  
+  if (timeRange === 'realtime') {
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    filtered = allActivities.filter(a => new Date(a.createdAt) >= oneDayAgo)
+  } else if (timeRange === '3days') {
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+    filtered = allActivities.filter(a => new Date(a.createdAt) >= threeDaysAgo)
+  }
+  
+  filtered.sort((a, b) => b.currentParticipants - a.currentParticipants)
+  
+  return filtered.slice(0, 5)
+}
+
 export async function getActivities(
   city?: string,
   type?: string,
@@ -68,14 +87,14 @@ export async function getActivityById(id: number): Promise<Activity> {
   }
 }
 
-export async function getHotActivities(): Promise<Activity[]> {
+export async function getHotActivities(timeRange: string = '7days'): Promise<Activity[]> {
   try {
-    const response = await fetch(`${BASE_URL}/activities/hot`)
+    const response = await fetch(`${BASE_URL}/activities/hot?timeRange=${timeRange}`)
     const result: ApiResponse<Activity[]> = await response.json()
     return result.data
   } catch (error) {
     console.log('Using mock data for hot activities')
-    return mockActivities.slice(0, 5).map(convertMockActivity)
+    return getMockHotActivities(timeRange)
   }
 }
 

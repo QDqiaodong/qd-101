@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -40,4 +41,10 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Modifying
     @Query("UPDATE Activity a SET a.currentParticipants = a.currentParticipants - 1 WHERE a.id = :id")
     void decrementParticipants(@Param("id") Long id);
+    
+    @Query("SELECT a FROM Activity a WHERE a.createdAt >= :startTime ORDER BY a.currentParticipants DESC")
+    List<Activity> findHotActivitiesSince(@Param("startTime") LocalDateTime startTime);
+    
+    @Query("SELECT a FROM Activity a WHERE a.createdAt >= :startTime ORDER BY a.views DESC")
+    List<Activity> findPopularActivitiesSince(@Param("startTime") LocalDateTime startTime);
 }

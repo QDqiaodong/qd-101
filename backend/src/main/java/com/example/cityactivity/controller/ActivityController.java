@@ -59,8 +59,9 @@ public class ActivityController {
     }
     
     @GetMapping("/hot")
-    public ResponseEntity<ApiResponse<List<ActivityResponse>>> getHotActivities() {
-        List<ActivityResponse> activities = activityService.getHotActivities();
+    public ResponseEntity<ApiResponse<List<ActivityResponse>>> getHotActivities(
+            @RequestParam(required = false, defaultValue = "7days") String timeRange) {
+        List<ActivityResponse> activities = activityService.getHotActivities(timeRange);
         return ResponseEntity.ok(ApiResponse.success(activities));
     }
 }

@@ -14,7 +14,15 @@ const selectedType = ref('')
 const sortBy = ref('newest')
 const activities = ref<Activity[]>([])
 const hotActivities = ref<Activity[]>([])
+const hotTimeRange = ref('7days')
 const loading = ref(true)
+const hotLoading = ref(false)
+
+const hotTimeOptions = [
+  { value: 'realtime', label: '实时热度' },
+  { value: '3days', label: '近3天热度' },
+  { value: '7days', label: '近7天热度' },
+]
 
 const activityTypes = ['聚餐', '徒步', '打球', '探店', '桌游', '其他']
 
@@ -75,11 +83,22 @@ async function loadActivities() {
   loading.value = true
   try {
     activities.value = await getActivities(selectedCity.value || undefined, selectedType.value || undefined, sortBy.value)
-    hotActivities.value = await getHotActivities()
+    hotActivities.value = await getHotActivities(hotTimeRange.value)
   } catch (error) {
     console.error('Failed to load activities:', error)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadHotActivities() {
+  hotLoading.value = true
+  try {
+    hotActivities.value = await getHotActivities(hotTimeRange.value)
+  } catch (error) {
+    console.error('Failed to load hot activities:', error)
+  } finally {
+    hotLoading.value = false
   }
 }
 
@@ -201,7 +220,22 @@ onMounted(() => {
               <span class="text-2xl">🔥</span>
               热门活动榜
             </h3>
-            <div v-if="loading" class="text-center py-8">
+            <div class="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg">
+              <button
+                v-for="option in hotTimeOptions"
+                :key="option.value"
+                @click="hotTimeRange = option.value; loadHotActivities()"
+                :class="[
+                  'flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all',
+                  hotTimeRange === option.value
+                    ? 'bg-white text-primary shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                ]"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <div v-if="loading || hotLoading" class="text-center py-8">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
             <div v-else class="space-y-4">
