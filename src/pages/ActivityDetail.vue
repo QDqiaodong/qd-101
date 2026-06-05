@@ -115,7 +115,8 @@ const handleRegister = async () => {
     alert('报名成功！')
     await loadActivity()
   } catch (error) {
-    alert('报名失败，请稍后重试')
+    const message = error instanceof Error ? error.message : '报名失败，请稍后重试'
+    alert(message)
   }
 }
 
@@ -125,7 +126,8 @@ const handleCancel = async () => {
     alert('已取消报名')
     await loadActivity()
   } catch (error) {
-    alert('取消报名失败，请稍后重试')
+    const message = error instanceof Error ? error.message : '取消报名失败，请稍后重试'
+    alert(message)
   }
 }
 

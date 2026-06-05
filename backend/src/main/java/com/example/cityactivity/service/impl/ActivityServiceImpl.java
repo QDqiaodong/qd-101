@@ -123,7 +123,7 @@ public class ActivityServiceImpl implements ActivityService {
     
     @Override
     @Transactional
-    @CacheEvict(value = "activity_detail", key = "#id")
+    @CacheEvict(value = {"activity_detail", "activities", "hot_activities"}, allEntries = true)
     public void incrementViews(Long id) {
         activityRepository.incrementViews(id);
         log.debug("Incremented views for activity: {}", id);

@@ -111,30 +111,66 @@ export async function createActivity(data: {
     },
     body: JSON.stringify(data),
   })
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: '创建活动失败' }))
+    throw new Error(errorData.message || `HTTP ${response.status}`)
+  }
+  
   const result: ApiResponse<Activity> = await response.json()
+  if (result.code !== 200) {
+    throw new Error(result.message || '创建活动失败')
+  }
+  
   return result.data
 }
 
 export async function registerActivity(activityId: number, userId: number): Promise<void> {
   try {
-    await fetch(`${BASE_URL}/registrations`, {
+    const response = await fetch(`${BASE_URL}/registrations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ activityId, userId }),
     })
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '报名失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+    
+    const result: ApiResponse<void> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '报名失败')
+    }
   } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
     console.log('Mock registration successful')
   }
 }
 
 export async function cancelRegistration(activityId: number, userId: number): Promise<void> {
   try {
-    await fetch(`${BASE_URL}/registrations?activityId=${activityId}&userId=${userId}`, {
+    const response = await fetch(`${BASE_URL}/registrations?activityId=${activityId}&userId=${userId}`, {
       method: 'DELETE',
     })
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '取消报名失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+    
+    const result: ApiResponse<void> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '取消报名失败')
+    }
   } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
     console.log('Mock cancellation successful')
   }
 }

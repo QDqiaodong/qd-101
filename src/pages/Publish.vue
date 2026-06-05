@@ -50,7 +50,8 @@ const handleSubmit = async () => {
     alert('发布成功！')
     router.push('/')
   } catch (error) {
-    alert('发布失败，请稍后重试')
+    const message = error instanceof Error ? error.message : '发布失败，请稍后重试'
+    alert(message)
   } finally {
     isSubmitting.value = false
   }
