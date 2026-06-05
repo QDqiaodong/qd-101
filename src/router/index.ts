@@ -5,12 +5,18 @@ import Publish from '@/pages/Publish.vue'
 import ActivityDetail from '@/pages/ActivityDetail.vue'
 import Profile from '@/pages/Profile.vue'
 import Match from '@/pages/Match.vue'
+import NightLife from '@/pages/NightLife.vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
     component: Home,
+  },
+  {
+    path: '/nightlife',
+    name: 'nightlife',
+    component: NightLife,
   },
   {
     path: '/match',

@@ -31,6 +31,17 @@ const route = useRoute()
             首页
           </button>
           <button
+            @click="router.push('/nightlife')"
+            :class="[
+              'px-4 py-2 rounded-lg transition-colors',
+              route.name === 'nightlife' 
+                ? 'bg-primary text-white' 
+                : 'text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+            🌙 夜生活
+          </button>
+          <button
             @click="router.push('/match')"
             :class="[
               'px-4 py-2 rounded-lg transition-colors',

@@ -227,7 +227,255 @@ export let mockRegistrations: Registration[] = [
   },
 ]
 
-export let activities = [...mockActivities]
+const nightActivityImages = [
+  'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop',
+]
+
+const tonight6 = new Date(today)
+tonight6.setHours(18, 0, 0, 0)
+
+const tonight630 = new Date(today)
+tonight630.setHours(18, 30, 0, 0)
+
+const tonight7 = new Date(today)
+tonight7.setHours(19, 0, 0, 0)
+
+const tonight730 = new Date(today)
+tonight730.setHours(19, 30, 0, 0)
+
+const tonight8 = new Date(today)
+tonight8.setHours(20, 0, 0, 0)
+
+const tonight830 = new Date(today)
+tonight830.setHours(20, 30, 0, 0)
+
+const tonight9 = new Date(today)
+tonight9.setHours(21, 0, 0, 0)
+
+const tonight930 = new Date(today)
+tonight930.setHours(21, 30, 0, 0)
+
+const tonight10 = new Date(today)
+tonight10.setHours(22, 0, 0, 0)
+
+const tonight1030 = new Date(today)
+tonight1030.setHours(22, 30, 0, 0)
+
+const tomorrowNight = new Date(today)
+tomorrowNight.setDate(today.getDate() + 1)
+tomorrowNight.setHours(19, 0, 0, 0)
+
+const fridayNight = new Date(today)
+fridayNight.setDate(today.getDate() + ((5 - today.getDay() + 7) % 7))
+fridayNight.setHours(19, 30, 0, 0)
+
+export const nightActivities: Activity[] = [
+  {
+    id: 'night-1',
+    title: '今晚簋街小龙虾夜宵局',
+    type: '聚餐',
+    city: '北京',
+    location: '簋街胡大饭馆',
+    time: `${formatDate(tonight630)} 18:30`,
+    maxParticipants: 8,
+    currentParticipants: 5,
+    description: '下班直奔簋街，小龙虾+烤串+冰啤酒，麻辣鲜香，深夜食堂走起！',
+    requirements: '能吃辣，不挑食，AA制',
+    image: nightActivityImages[0],
+    views: 256,
+    createdAt: '2026-06-05T14:00:00',
+    creatorId: 'user-12',
+  },
+  {
+    id: 'night-2',
+    title: '深夜桌游吧·狼人杀剧本杀通宵场',
+    type: '桌游',
+    city: '北京',
+    location: '三里屯某某桌游吧',
+    time: `${formatDate(tonight8)} 20:00`,
+    maxParticipants: 12,
+    currentParticipants: 9,
+    description: '周五晚上来场烧脑桌游！狼人杀、剧本杀、uno全都有，玩到嗨！',
+    requirements: '喜欢逻辑推理，放得开玩，能玩到深夜',
+    image: nightActivityImages[3],
+    views: 389,
+    createdAt: '2026-06-04T20:00:00',
+    creatorId: 'user-13',
+  },
+  {
+    id: 'night-3',
+    title: 'CBD下班后小聚·清吧聊天',
+    type: '聚餐',
+    city: '北京',
+    location: 'CBD商圈某某清吧',
+    time: `${formatDate(tonight7)} 19:00`,
+    maxParticipants: 6,
+    currentParticipants: 3,
+    description: '下班不想直接回家？来清吧小酌一杯，聊聊工作生活，认识新朋友。',
+    requirements: '性格开朗，不酗酒',
+    image: nightActivityImages[1],
+    views: 178,
+    createdAt: '2026-06-05T10:00:00',
+    creatorId: 'user-14',
+  },
+  {
+    id: 'night-4',
+    title: '奥森夜跑5公里·夜猫子跑团',
+    type: '徒步',
+    city: '北京',
+    location: '奥森公园南门',
+    time: `${formatDate(tonight830)} 20:30`,
+    maxParticipants: 15,
+    currentParticipants: 10,
+    description: '晚上跑步更凉快！绕奥森南园跑一圈5公里，配速6分30秒，新手友好。',
+    requirements: '有跑步基础，穿运动鞋，带水',
+    image: nightActivityImages[6],
+    views: 234,
+    createdAt: '2026-06-04T16:00:00',
+    creatorId: 'user-15',
+  },
+  {
+    id: 'night-5',
+    title: '深夜食堂·日式居酒屋探店',
+    type: '探店',
+    city: '北京',
+    location: '望京某某居酒屋',
+    time: `${formatDate(tonight9)} 21:00`,
+    maxParticipants: 6,
+    currentParticipants: 4,
+    description: '藏在望京的宝藏居酒屋，烧鸟+清酒+日剧氛围，深夜的治愈时刻。',
+    requirements: '热爱美食，喜欢日料',
+    image: nightActivityImages[2],
+    views: 167,
+    createdAt: '2026-06-05T12:00:00',
+    creatorId: 'user-16',
+  },
+  {
+    id: 'night-6',
+    title: '五道口深夜狼人杀·高手局',
+    type: '桌游',
+    city: '北京',
+    location: '五道口桌游吧',
+    time: `${formatDate(tonight930)} 21:30`,
+    maxParticipants: 10,
+    currentParticipants: 7,
+    description: '五道口狼人杀高手局，逻辑流玩家聚集地，玩到凌晨不是事！',
+    requirements: '熟悉狼人杀规则，逻辑清晰',
+    image: nightActivityImages[7],
+    views: 298,
+    createdAt: '2026-06-03T22:00:00',
+    creatorId: 'user-17',
+  },
+  {
+    id: 'night-7',
+    title: '朝阳公园夜跑团·减肥打卡',
+    type: '徒步',
+    city: '北京',
+    location: '朝阳公园西门',
+    time: `${formatDate(tonight730)} 19:30`,
+    maxParticipants: 20,
+    currentParticipants: 12,
+    description: '每天晚上朝阳公园夜跑，3-5公里任选，跑完一起拉伸打卡。',
+    requirements: '想运动减肥，有基本运动能力',
+    image: nightActivityImages[11],
+    views: 312,
+    createdAt: '2026-06-02T09:00:00',
+    creatorId: 'user-18',
+  },
+  {
+    id: 'night-8',
+    title: '撸串啤酒·深夜解忧杂货店',
+    type: '聚餐',
+    city: '北京',
+    location: '双井某烧烤店',
+    time: `${formatDate(tonight10)} 22:00`,
+    maxParticipants: 8,
+    currentParticipants: 6,
+    description: '深夜的烧烤摊，是城市的解忧杂货店。烤串+啤酒+聊天，烦恼全忘掉。',
+    requirements: '性格开朗，能吃能聊',
+    image: nightActivityImages[4],
+    views: 245,
+    createdAt: '2026-06-05T15:00:00',
+    creatorId: 'user-19',
+  },
+  {
+    id: 'night-9',
+    title: '下班后的微醺时光·鸡尾酒品鉴',
+    type: '探店',
+    city: '北京',
+    location: '三里屯某某鸡尾酒吧',
+    time: `${formatDate(tonight6)} 18:00`,
+    maxParticipants: 6,
+    currentParticipants: 2,
+    description: '下班后来杯鸡尾酒放松一下，专业调酒师教你认识各种基酒。',
+    requirements: '喜欢鸡尾酒，不酗酒',
+    image: nightActivityImages[9],
+    views: 145,
+    createdAt: '2026-06-05T11:00:00',
+    creatorId: 'user-20',
+  },
+  {
+    id: 'night-10',
+    title: '深夜剧本杀·情感本哭哭局',
+    type: '桌游',
+    city: '北京',
+    location: '朝阳剧本杀推理馆',
+    time: `${formatDate(tomorrowNight)} 19:00`,
+    maxParticipants: 6,
+    currentParticipants: 4,
+    description: '明天晚上高分情感本，沉浸式体验，准备好纸巾，哭就完事了。',
+    requirements: '喜欢情感本，代入感强',
+    image: nightActivityImages[5],
+    views: 201,
+    createdAt: '2026-06-04T14:00:00',
+    creatorId: 'user-21',
+  },
+  {
+    id: 'night-11',
+    title: '后海夜跑+酒吧小坐',
+    type: '徒步',
+    city: '北京',
+    location: '后海地铁站',
+    time: `${formatDate(fridayNight)} 19:30`,
+    maxParticipants: 10,
+    currentParticipants: 5,
+    description: '周五晚后海夜跑，沿着湖边跑3公里，跑完去酒吧小坐聊聊天。',
+    requirements: '喜欢运动，性格开朗',
+    image: nightActivityImages[8],
+    views: 189,
+    createdAt: '2026-06-03T18:00:00',
+    creatorId: 'user-22',
+  },
+  {
+    id: 'night-12',
+    title: '深夜火锅局·越夜越热闹',
+    type: '聚餐',
+    city: '北京',
+    location: '国贸海底捞',
+    time: `${formatDate(tonight1030)} 22:30`,
+    maxParticipants: 8,
+    currentParticipants: 3,
+    description: '深夜火锅最治愈！海底捞服务好味道棒，聊到天亮都可以。',
+    requirements: '爱吃火锅，不挑食',
+    image: nightActivityImages[10],
+    views: 156,
+    createdAt: '2026-06-05T16:00:00',
+    creatorId: 'user-23',
+  },
+]
+
+export let activities = [...mockActivities, ...nightActivities]
 export let registrations = [...mockRegistrations]
 
 export function saveToStorage() {
