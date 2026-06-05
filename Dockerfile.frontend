@@ -1,16 +1,18 @@
-FROM node:20-alpine AS builder
+ARG DOCKER_REGISTRY=docker.m.daocloud.io/library
+FROM ${DOCKER_REGISTRY}/node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY .npmrc package.json package-lock.json ./
 
 RUN npm ci
 
-COPY . .
+COPY index.html nginx.conf postcss.config.js tailwind.config.js tsconfig.json tsconfig.node.json vite.config.ts ./
+COPY src ./src
 
 RUN npm run build
 
-FROM nginx:alpine
+FROM ${DOCKER_REGISTRY}/nginx:1.27-alpine
 
 RUN apk add --no-cache wget tzdata
 

@@ -1,15 +1,22 @@
-FROM maven:3.9-eclipse-temurin-21 AS builder
+ARG DOCKER_REGISTRY=docker.m.daocloud.io/library
+FROM ${DOCKER_REGISTRY}/maven:3.9-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
-COPY pom.xml .
+COPY pom.xml ./
+COPY .mvn ./.mvn
+
+RUN mvn -B -ntp dependency:go-offline -DskipTests
+
 COPY src ./src
 
-RUN mvn clean package -DskipTests
+RUN mvn -B -ntp clean package -DskipTests
 
-FROM maven:3.9-eclipse-temurin-21
+FROM ${DOCKER_REGISTRY}/eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
+
+RUN apk add --no-cache curl
 
 COPY --from=builder /app/target/city-activity-1.0.0.jar app.jar
 
