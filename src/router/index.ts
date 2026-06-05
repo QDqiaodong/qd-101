@@ -4,12 +4,18 @@ import Home from '@/pages/Home.vue'
 import Publish from '@/pages/Publish.vue'
 import ActivityDetail from '@/pages/ActivityDetail.vue'
 import Profile from '@/pages/Profile.vue'
+import Match from '@/pages/Match.vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
     component: Home,
+  },
+  {
+    path: '/match',
+    name: 'match',
+    component: Match,
   },
   {
     path: '/publish',

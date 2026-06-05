@@ -31,6 +31,17 @@ const route = useRoute()
             首页
           </button>
           <button
+            @click="router.push('/match')"
+            :class="[
+              'px-4 py-2 rounded-lg transition-colors',
+              route.name === 'match' 
+                ? 'bg-primary text-white' 
+                : 'text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+            🎯 智能组队
+          </button>
+          <button
             @click="router.push('/publish')"
             :class="[
               'px-4 py-2 rounded-lg transition-colors',
