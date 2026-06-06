@@ -1,5 +1,5 @@
-import { mockActivities, mockRegistrations } from '@/data/mockData'
-import type { Activity as MockActivity } from '@/types'
+import { mockActivities, mockRegistrations, mockCreators } from '@/data/mockData'
+import type { Activity as MockActivity, CreatorProfile } from '@/types'
 
 const BASE_URL = '/api'
 
@@ -220,6 +220,86 @@ export async function getRegisteredActivities(userId: number): Promise<Activity[
       .map(r => r.activityId)
     return mockActivities
       .filter(a => registeredIds.includes(a.id))
+      .map(convertMockActivity)
+  }
+}
+
+export interface Creator {
+  id: number
+  name: string
+  avatar: string
+  bio: string
+  totalActivities: number
+  successRate: number
+  avgFillSpeedHours: number
+  commonTypes: { type: string; count: number }[]
+  commonAreas: { name: string; count: number }[]
+  reviewTags: { tag: string; count: number }[]
+  styleTags: string[]
+}
+
+function convertMockCreator(mock: CreatorProfile): Creator {
+  return {
+    ...mock,
+    id: parseInt(mock.id.replace('user-', '')),
+  }
+}
+
+export async function getCreators(
+  type?: string,
+  sortBy: string = 'popular'
+): Promise<Creator[]> {
+  try {
+    const params = new URLSearchParams()
+    if (type) params.set('type', type)
+    params.set('sortBy', sortBy)
+    
+    const response = await fetch(`${BASE_URL}/creators?${params}`)
+    const result: ApiResponse<Creator[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for creators')
+    let creators = [...mockCreators].map(convertMockCreator)
+    
+    if (type) {
+      creators = creators.filter(c => 
+        c.commonTypes.some(t => t.type === type)
+      )
+    }
+    
+    if (sortBy === 'popular') {
+      creators.sort((a, b) => b.totalActivities - a.totalActivities)
+    } else if (sortBy === 'successRate') {
+      creators.sort((a, b) => b.successRate - a.successRate)
+    } else if (sortBy === 'fillSpeed') {
+      creators.sort((a, b) => a.avgFillSpeedHours - b.avgFillSpeedHours)
+    }
+    
+    return creators
+  }
+}
+
+export async function getCreatorById(id: number): Promise<Creator> {
+  try {
+    const response = await fetch(`${BASE_URL}/creators/${id}`)
+    const result: ApiResponse<Creator> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for creator detail')
+    const mock = mockCreators.find(c => parseInt(c.id.replace('user-', '')) === id) || mockCreators[0]
+    return convertMockCreator(mock)
+  }
+}
+
+export async function getCreatorActivities(creatorId: number): Promise<Activity[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/creators/${creatorId}/activities`)
+    const result: ApiResponse<Activity[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for creator activities')
+    return mockActivities
+      .filter(a => parseInt(a.creatorId.replace('user-', '')) === creatorId)
       .map(convertMockActivity)
   }
 }

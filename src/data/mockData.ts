@@ -1,4 +1,4 @@
-import type { Activity, User, Registration } from '@/types'
+import type { Activity, User, Registration, CreatorProfile } from '@/types'
 
 export const mockUser: User = {
   id: 'user-1',
@@ -496,3 +496,221 @@ export function loadFromStorage() {
 }
 
 loadFromStorage()
+
+const creatorAvatars = [
+  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
+]
+
+export const mockCreators: CreatorProfile[] = [
+  {
+    id: 'user-2',
+    name: '美食探险家小王',
+    avatar: creatorAvatars[0],
+    bio: '吃遍北京大街小巷的美食博主，带你发现隐藏的美味。',
+    totalActivities: 48,
+    successRate: 95,
+    avgFillSpeedHours: 12,
+    commonTypes: [
+      { type: '探店', count: 28 },
+      { type: '聚餐', count: 15 },
+      { type: '其他', count: 5 },
+    ],
+    commonAreas: [
+      { name: 'CBD商圈', count: 15 },
+      { name: '三里屯', count: 12 },
+      { name: '五道口', count: 8 },
+    ],
+    reviewTags: [
+      { tag: '组织靠谱', count: 42 },
+      { tag: '选店有品味', count: 38 },
+      { tag: '气氛活跃', count: 35 },
+      { tag: '人超nice', count: 30 },
+    ],
+    styleTags: ['美食达人', '探店专业户', '气氛担当'],
+  },
+  {
+    id: 'user-3',
+    name: '户外领队-大山',
+    avatar: creatorAvatars[2],
+    bio: '户外爱好者，周末不是在爬山就是在去爬山的路上。',
+    totalActivities: 36,
+    successRate: 92,
+    avgFillSpeedHours: 24,
+    commonTypes: [
+      { type: '徒步', count: 30 },
+      { type: '打球', count: 4 },
+      { type: '聚餐', count: 2 },
+    ],
+    commonAreas: [
+      { name: '香山', count: 12 },
+      { name: '奥森公园', count: 10 },
+      { name: '朝阳公园', count: 6 },
+    ],
+    reviewTags: [
+      { tag: '路线专业', count: 32 },
+      { tag: '安全靠谱', count: 28 },
+      { tag: '体力好', count: 25 },
+      { tag: '热心肠', count: 20 },
+    ],
+    styleTags: ['户外达人', '徒步领队', '阳光男孩'],
+  },
+  {
+    id: 'user-5',
+    name: '桌游女王Luna',
+    avatar: creatorAvatars[1],
+    bio: '桌游吧老板娘，狼人杀资深玩家，剧本杀情感本天花板。',
+    totalActivities: 56,
+    successRate: 98,
+    avgFillSpeedHours: 8,
+    commonTypes: [
+      { type: '桌游', count: 52 },
+      { type: '聚餐', count: 4 },
+    ],
+    commonAreas: [
+      { name: '三里屯', count: 20 },
+      { name: '五道口', count: 18 },
+      { name: '朝阳区', count: 10 },
+    ],
+    reviewTags: [
+      { tag: '逻辑清晰', count: 48 },
+      { tag: '气氛超棒', count: 45 },
+      { tag: '颜值担当', count: 40 },
+      { tag: 'DM专业', count: 35 },
+    ],
+    styleTags: ['桌游大神', '逻辑女王', '氛围组组长'],
+  },
+  {
+    id: 'user-13',
+    name: '夜猫子小夜',
+    avatar: creatorAvatars[3],
+    bio: '深夜活动组织者，越夜越精神，带你玩转北京夜生活。',
+    totalActivities: 42,
+    successRate: 90,
+    avgFillSpeedHours: 6,
+    commonTypes: [
+      { type: '桌游', count: 18 },
+      { type: '聚餐', count: 15 },
+      { type: '探店', count: 9 },
+    ],
+    commonAreas: [
+      { name: '三里屯', count: 16 },
+      { name: '簋街', count: 12 },
+      { name: '五道口', count: 8 },
+    ],
+    reviewTags: [
+      { tag: '玩得尽兴', count: 38 },
+      { tag: '熬夜冠军', count: 32 },
+      { tag: '安排周到', count: 28 },
+      { tag: '有趣的灵魂', count: 25 },
+    ],
+    styleTags: ['深夜玩家', '夜生活达人', '通宵王者'],
+  },
+  {
+    id: 'user-18',
+    name: '跑团团长-阿杰',
+    avatar: creatorAvatars[4],
+    bio: '跑步爱好者，全马选手，带你从入门到半马。',
+    totalActivities: 32,
+    successRate: 88,
+    avgFillSpeedHours: 36,
+    commonTypes: [
+      { type: '徒步', count: 28 },
+      { type: '打球', count: 3 },
+      { type: '聚餐', count: 1 },
+    ],
+    commonAreas: [
+      { name: '朝阳公园', count: 12 },
+      { name: '奥森公园', count: 15 },
+      { name: '后海', count: 5 },
+    ],
+    reviewTags: [
+      { tag: '专业指导', count: 28 },
+      { tag: '耐心细致', count: 25 },
+      { tag: '减肥成功', count: 20 },
+      { tag: '自律达人', count: 18 },
+    ],
+    styleTags: ['运动达人', '跑步教练', '自律狂魔'],
+  },
+  {
+    id: 'user-20',
+    name: '调酒师James',
+    avatar: creatorAvatars[6],
+    bio: '资深调酒师，开过酒吧，爱喝也会调，喜欢微醺的感觉。',
+    totalActivities: 24,
+    successRate: 85,
+    avgFillSpeedHours: 48,
+    commonTypes: [
+      { type: '探店', count: 18 },
+      { type: '聚餐', count: 6 },
+    ],
+    commonAreas: [
+      { name: '三里屯', count: 10 },
+      { name: 'CBD商圈', count: 8 },
+      { name: '望京', count: 6 },
+    ],
+    reviewTags: [
+      { tag: '酒品超棒', count: 22 },
+      { tag: '知识渊博', count: 18 },
+      { tag: '品味独到', count: 15 },
+      { tag: '绅士风度', count: 12 },
+    ],
+    styleTags: ['调酒达人', '品酒师', '优雅男士'],
+  },
+  {
+    id: 'user-8',
+    name: '烧烤达人老陈',
+    avatar: creatorAvatars[5],
+    bio: '东北人，撸串专业户，号称北京烧烤活地图。',
+    totalActivities: 28,
+    successRate: 93,
+    avgFillSpeedHours: 18,
+    commonTypes: [
+      { type: '聚餐', count: 25 },
+      { type: '探店', count: 3 },
+    ],
+    commonAreas: [
+      { name: '簋街', count: 12 },
+      { name: '双井', count: 8 },
+      { name: '望京', count: 5 },
+    ],
+    reviewTags: [
+      { tag: '选择困难症福音', count: 24 },
+      { tag: '太好吃了', count: 22 },
+      { tag: '豪爽大气', count: 20 },
+      { tag: '性价比高', count: 18 },
+    ],
+    styleTags: ['烧烤大王', '美食雷达', '东北老铁'],
+  },
+  {
+    id: 'user-21',
+    name: '剧本杀编导-小雨',
+    avatar: creatorAvatars[7],
+    bio: '戏剧学院毕业，剧本杀狂热爱好者，情感本专业户。',
+    totalActivities: 30,
+    successRate: 96,
+    avgFillSpeedHours: 10,
+    commonTypes: [
+      { type: '桌游', count: 28 },
+      { type: '聚餐', count: 2 },
+    ],
+    commonAreas: [
+      { name: '朝阳区', count: 15 },
+      { name: '三里屯', count: 8 },
+      { name: '五道口', count: 5 },
+    ],
+    reviewTags: [
+      { tag: '沉浸感强', count: 27 },
+      { tag: '哭到崩溃', count: 24 },
+      { tag: '情感细腻', count: 22 },
+      { tag: '选本有眼光', count: 20 },
+    ],
+    styleTags: ['剧本杀达人', '情感本天花板', '眼泪收割机'],
+  },
+]

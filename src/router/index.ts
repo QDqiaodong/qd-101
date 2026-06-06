@@ -6,6 +6,8 @@ import ActivityDetail from '@/pages/ActivityDetail.vue'
 import Profile from '@/pages/Profile.vue'
 import Match from '@/pages/Match.vue'
 import NightLife from '@/pages/NightLife.vue'
+import CreatorHall from '@/pages/CreatorHall.vue'
+import CreatorDetail from '@/pages/CreatorDetail.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -22,6 +24,16 @@ const routes: RouteRecordRaw[] = [
     path: '/match',
     name: 'match',
     component: Match,
+  },
+  {
+    path: '/creators',
+    name: 'creators',
+    component: CreatorHall,
+  },
+  {
+    path: '/creator/:id',
+    name: 'creator',
+    component: CreatorDetail,
   },
   {
     path: '/publish',

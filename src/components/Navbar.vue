@@ -53,6 +53,17 @@ const route = useRoute()
             🎯 智能组队
           </button>
           <button
+            @click="router.push('/creators')"
+            :class="[
+              'px-4 py-2 rounded-lg transition-colors',
+              route.name === 'creators' || route.name === 'creator'
+                ? 'bg-primary text-white' 
+                : 'text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+            🎭 名片馆
+          </button>
+          <button
             @click="router.push('/publish')"
             :class="[
               'px-4 py-2 rounded-lg transition-colors',
