@@ -8,6 +8,7 @@ import Match from '@/pages/Match.vue'
 import NightLife from '@/pages/NightLife.vue'
 import CreatorHall from '@/pages/CreatorHall.vue'
 import CreatorDetail from '@/pages/CreatorDetail.vue'
+import Checklist from '@/pages/Checklist.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -49,6 +50,11 @@ const routes: RouteRecordRaw[] = [
     path: '/profile',
     name: 'profile',
     component: Profile,
+  },
+  {
+    path: '/checklist',
+    name: 'checklist',
+    component: Checklist,
   },
 ]
 

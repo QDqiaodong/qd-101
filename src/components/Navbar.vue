@@ -64,6 +64,17 @@ const route = useRoute()
             🎭 名片馆
           </button>
           <button
+            @click="router.push('/checklist')"
+            :class="[
+              'px-4 py-2 rounded-lg transition-colors',
+              route.name === 'checklist' 
+                ? 'bg-primary text-white' 
+                : 'text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+            📋 行前清单
+          </button>
+          <button
             @click="router.push('/publish')"
             :class="[
               'px-4 py-2 rounded-lg transition-colors',
