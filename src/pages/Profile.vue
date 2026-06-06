@@ -2,20 +2,28 @@
 import { ref, computed, onMounted } from 'vue'
 import Navbar from '@/components/Navbar.vue'
 import ActivityCard from '@/components/ActivityCard.vue'
-import { getActivitiesByCreator, getRegisteredActivities, type Activity } from '@/api/index'
+import ActivityTimeline from '@/components/ActivityTimeline.vue'
+import { getActivitiesByCreator, getRegisteredActivities, getUserActivityFootprints, type Activity, type ActivityFootprint } from '@/api/index'
 
 const CURRENT_USER_ID = 2
 
-const activeTab = ref('joined')
+const activeTab = ref('timeline')
 const myCreatedActivities = ref<Activity[]>([])
 const myJoinedActivities = ref<Activity[]>([])
+const activityFootprints = ref<ActivityFootprint[]>([])
 const loading = ref(true)
 
 async function loadActivities() {
   loading.value = true
   try {
-    myCreatedActivities.value = await getActivitiesByCreator(CURRENT_USER_ID)
-    myJoinedActivities.value = await getRegisteredActivities(CURRENT_USER_ID)
+    const [created, joined, footprints] = await Promise.all([
+      getActivitiesByCreator(CURRENT_USER_ID),
+      getRegisteredActivities(CURRENT_USER_ID),
+      getUserActivityFootprints(CURRENT_USER_ID)
+    ])
+    myCreatedActivities.value = created
+    myJoinedActivities.value = joined
+    activityFootprints.value = footprints
   } catch (error) {
     console.error('Failed to load activities:', error)
   } finally {
@@ -63,6 +71,17 @@ onMounted(() => {
       <div class="mt-6 bg-white rounded-xl shadow-sm overflow-hidden">
         <div class="flex border-b border-gray-100">
           <button
+            @click="activeTab = 'timeline'"
+            :class="[
+              'flex-1 py-4 text-center font-medium transition-colors',
+              activeTab === 'timeline'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-gray-500 hover:text-gray-700'
+            ]"
+          >
+            活动足迹
+          </button>
+          <button
             @click="activeTab = 'joined'"
             :class="[
               'flex-1 py-4 text-center font-medium transition-colors',
@@ -90,6 +109,10 @@ onMounted(() => {
           <div v-if="loading" class="text-center py-16">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <p class="mt-4 text-gray-500">加载中...</p>
+          </div>
+          
+          <div v-else-if="activeTab === 'timeline'">
+            <ActivityTimeline :footprints="activityFootprints" />
           </div>
           
           <div v-else-if="activeTab === 'joined'">

@@ -33,4 +33,6 @@ public class Registration {
     
     @Column(nullable = false)
     private Boolean cancelled;
+    
+    private LocalDateTime cancelledAt;
 }

@@ -67,10 +67,13 @@ public class RegistrationServiceImpl implements RegistrationService {
     @Transactional
     @CacheEvict(value = {"activities", "hot_activities", "activity_detail", "user_registrations"}, allEntries = true)
     public void cancelRegistration(Long activityId, Long userId) {
-        registrationRepository.findByActivityIdAndUserIdAndCancelledFalse(activityId, userId)
+        Registration registration = registrationRepository.findByActivityIdAndUserIdAndCancelledFalse(activityId, userId)
                 .orElseThrow(() -> new BusinessException("未找到报名记录"));
         
-        registrationRepository.cancelRegistration(activityId, userId);
+        registration.setCancelled(true);
+        registration.setCancelledAt(LocalDateTime.now());
+        registrationRepository.save(registration);
+        
         activityRepository.decrementParticipants(activityId);
         
         log.info("User {} cancelled registration for activity {}", userId, activityId);

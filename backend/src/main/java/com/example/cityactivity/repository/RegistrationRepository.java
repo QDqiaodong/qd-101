@@ -17,6 +17,8 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     
     List<Registration> findByUserIdAndCancelledFalse(Long userId);
     
+    List<Registration> findByUserId(Long userId);
+    
     List<Registration> findByActivityIdAndCancelledFalse(Long activityId);
     
     @Modifying

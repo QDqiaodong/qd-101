@@ -333,3 +333,109 @@ export async function getCreatorActivities(creatorId: number): Promise<Activity[
       .map(convertMockActivity)
   }
 }
+
+export interface ActivityFootprint {
+  id: number
+  activityId: number
+  title: string
+  activityType: string
+  city: string
+  location: string
+  image: string
+  activityTime: string
+  eventTime: string
+  eventType: 'PUBLISHED' | 'REGISTERED' | 'CANCELLED' | 'FULL' | 'CONFIRMED' | 'EXPIRED'
+  description: string
+}
+
+function getMockFootprints(): ActivityFootprint[] {
+  const now = new Date()
+  return [
+    {
+      id: 1,
+      activityId: 3,
+      title: '周末篮球友谊赛',
+      activityType: '打球',
+      city: '北京',
+      location: '洛克公园篮球场',
+      image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=300&fit=crop',
+      activityTime: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+      eventTime: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      eventType: 'PUBLISHED',
+      description: '你发布了活动 "周末篮球友谊赛"'
+    },
+    {
+      id: 2,
+      activityId: 1,
+      title: '周末CBD美食探店小分队',
+      activityType: '探店',
+      city: '北京',
+      location: '朝阳区CBD商圈',
+      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop',
+      activityTime: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      eventTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      eventType: 'REGISTERED',
+      description: '你报名了活动 "周末CBD美食探店小分队"'
+    },
+    {
+      id: 3,
+      activityId: 2,
+      title: '香山徒步登山活动',
+      activityType: '徒步',
+      city: '北京',
+      location: '香山公园东门集合',
+      image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=400&h=300&fit=crop',
+      activityTime: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+      eventTime: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      eventType: 'REGISTERED',
+      description: '你报名了活动 "香山徒步登山活动"'
+    },
+    {
+      id: 4,
+      activityId: 4,
+      title: '桌游之夜：狼人杀+剧本杀',
+      activityType: '桌游',
+      city: '北京',
+      location: '三里屯某某桌游吧',
+      image: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?w=400&h=300&fit=crop',
+      activityTime: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+      eventTime: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+      eventType: 'REGISTERED',
+      description: '你报名了活动 "桌游之夜：狼人杀+剧本杀"'
+    },
+    {
+      id: 5,
+      activityId: 4,
+      title: '桌游之夜：狼人杀+剧本杀',
+      activityType: '桌游',
+      city: '北京',
+      location: '三里屯某某桌游吧',
+      image: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?w=400&h=300&fit=crop',
+      activityTime: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+      eventTime: new Date(now.getTime() - 3.5 * 24 * 60 * 60 * 1000).toISOString(),
+      eventType: 'CANCELLED',
+      description: '你取消了活动 "桌游之夜：狼人杀+剧本杀" 的报名'
+    }
+  ]
+}
+
+export async function getUserActivityFootprints(userId: number): Promise<ActivityFootprint[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/users/${userId}/footprints`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    
+    const result: ApiResponse<ActivityFootprint[]> = await response.json()
+    
+    if (result.code !== 200 || !result.data) {
+      throw new Error(result.message || 'Invalid response')
+    }
+    
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for activity footprints:', error)
+    return getMockFootprints()
+  }
+}
