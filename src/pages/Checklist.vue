@@ -1,179 +1,46 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import Navbar from '@/components/Navbar.vue'
-import { getRegisteredActivities, type Activity } from '@/api/index'
+import { 
+  getRegisteredActivities, 
+  getActivitiesByCreator,
+  type Activity 
+} from '@/api/index'
+import { 
+  getChecklistByType, 
+  cloneChecklistItems,
+  type ChecklistItem,
+  type ActivityChecklist 
+} from '@/data/checklistConfig'
 
 const CURRENT_USER_ID = 2
 
 const loading = ref(true)
 const registeredActivities = ref<Activity[]>([])
+const createdActivities = ref<Activity[]>([])
 const selectedActivityId = ref<number | null>(null)
+const checklistItemMap = ref<Record<number, ChecklistItem[]>>({})
 
-interface ChecklistItem {
-  name: string
-  icon: string
-  checked: boolean
-  category: string
-}
-
-interface TransportOption {
-  type: string
-  icon: string
-  duration: string
-  risk: 'low' | 'medium' | 'high'
-  description: string
-}
-
-interface ActivityChecklist {
-  items: ChecklistItem[]
-  transportOptions: TransportOption[]
-  tips: string[]
-}
-
-const typeChecklistConfig: Record<string, ActivityChecklist> = {
-  '徒步': {
-    items: [
-      { name: '运动鞋/登山鞋', icon: '👟', checked: false, category: '穿着' },
-      { name: '运动服装', icon: '👕', checked: false, category: '穿着' },
-      { name: '遮阳帽/太阳镜', icon: '🕶️', checked: false, category: '穿着' },
-      { name: '防晒霜', icon: '🧴', checked: false, category: '防护' },
-      { name: '驱蚊液', icon: '🦟', checked: false, category: '防护' },
-      { name: '充电宝', icon: '🔋', checked: false, category: '电子' },
-      { name: '手机', icon: '📱', checked: false, category: '电子' },
-      { name: '饮用水（至少500ml）', icon: '💧', checked: false, category: '补给' },
-      { name: '能量棒/小零食', icon: '🍫', checked: false, category: '补给' },
-      { name: '纸巾/湿巾', icon: '🧻', checked: false, category: '其他' },
-      { name: '垃圾袋', icon: '🗑️', checked: false, category: '其他' },
-      { name: '急救包（创可贴等）', icon: '🩹', checked: false, category: '其他' },
-    ],
-    transportOptions: [
-      { type: '地铁', icon: '🚇', duration: '约45分钟', risk: 'low', description: '准时可靠，推荐' },
-      { type: '公交', icon: '🚌', duration: '约60分钟', risk: 'medium', description: '可能堵车，预留时间' },
-      { type: '打车', icon: '🚕', duration: '约30分钟', risk: 'low', description: '费用较高，可拼车' },
-      { type: '自驾', icon: '🚗', duration: '约25分钟', risk: 'medium', description: '停车可能紧张' },
-    ],
-    tips: [
-      '提前15分钟到达集合点，热身准备',
-      '沿途注意补水，少量多次',
-      '跟随队伍，不要擅自离队',
-      '下山时注意膝盖保护',
-    ],
-  },
-  '打球': {
-    items: [
-      { name: '运动服', icon: '👕', checked: false, category: '穿着' },
-      { name: '运动鞋', icon: '👟', checked: false, category: '穿着' },
-      { name: '运动手环/护具', icon: '⌚', checked: false, category: '装备' },
-      { name: '球拍（如有）', icon: '🏸', checked: false, category: '装备' },
-      { name: '运动毛巾', icon: '🧣', checked: false, category: '装备' },
-      { name: '换洗衣物', icon: '👔', checked: false, category: '其他' },
-      { name: '饮用水/运动饮料', icon: '💧', checked: false, category: '补给' },
-      { name: '香蕉/能量棒', icon: '🍌', checked: false, category: '补给' },
-      { name: '手机', icon: '📱', checked: false, category: '电子' },
-      { name: '充电宝', icon: '🔋', checked: false, category: '电子' },
-      { name: '纸巾/湿巾', icon: '🧻', checked: false, category: '其他' },
-      { name: '洗发水/沐浴露', icon: '🧴', checked: false, category: '其他' },
-    ],
-    transportOptions: [
-      { type: '地铁', icon: '🚇', duration: '约40分钟', risk: 'low', description: '准时可靠' },
-      { type: '公交', icon: '🚌', duration: '约55分钟', risk: 'medium', description: '可能堵车' },
-      { type: '打车', icon: '🚕', duration: '约25分钟', risk: 'low', description: '携带装备方便' },
-      { type: '自驾', icon: '🚗', duration: '约20分钟', risk: 'low', description: '有停车场，方便' },
-    ],
-    tips: [
-      '运动前做好热身，避免拉伤',
-      '运动中注意补充水分',
-      '运动后做好拉伸放松',
-      '记得带换洗衣物，运动后可洗澡',
-    ],
-  },
-  '桌游': {
-    items: [
-      { name: '手机+充电宝', icon: '📱', checked: false, category: '电子' },
-      { name: '身份证', icon: '🪪', checked: false, category: '证件' },
-      { name: '口罩（可选）', icon: '😷', checked: false, category: '防护' },
-      { name: '纸巾', icon: '🧻', checked: false, category: '其他' },
-      { name: '口香糖/薄荷糖', icon: '🍬', checked: false, category: '其他' },
-      { name: '雨伞（看天气）', icon: '☂️', checked: false, category: '其他' },
-    ],
-    transportOptions: [
-      { type: '地铁', icon: '🚇', duration: '约35分钟', risk: 'low', description: '推荐，不堵车' },
-      { type: '公交', icon: '🚌', duration: '约50分钟', risk: 'medium', description: '晚高峰可能堵车' },
-      { type: '打车', icon: '🚕', duration: '约20分钟', risk: 'low', description: '方便快捷' },
-      { type: '骑行', icon: '🚲', duration: '约25分钟', risk: 'medium', description: '锻炼身体，注意安全' },
-    ],
-    tips: [
-      '提前了解桌游规则，快速上手',
-      '桌游吧一般有饮料，可自带水杯',
-      '玩到深夜注意安全，结伴回家',
-      '保持手机电量充足',
-    ],
-  },
-  '聚餐': {
-    items: [
-      { name: '手机+充电宝', icon: '📱', checked: false, category: '电子' },
-      { name: '身份证', icon: '🪪', checked: false, category: '证件' },
-      { name: '口罩（可选）', icon: '😷', checked: false, category: '防护' },
-      { name: '纸巾/湿巾', icon: '🧻', checked: false, category: '其他' },
-      { name: '口香糖/薄荷糖', icon: '🍬', checked: false, category: '其他' },
-      { name: '雨伞（看天气）', icon: '☂️', checked: false, category: '其他' },
-    ],
-    transportOptions: [
-      { type: '地铁', icon: '🚇', duration: '约40分钟', risk: 'low', description: '不堵车，推荐' },
-      { type: '公交', icon: '🚌', duration: '约55分钟', risk: 'high', description: '晚高峰大概率堵车' },
-      { type: '打车', icon: '🚕', duration: '约25分钟', risk: 'medium', description: '晚高峰难打车' },
-      { type: '骑行', icon: '🚲', duration: '约30分钟', risk: 'medium', description: '注意交通安全' },
-    ],
-    tips: [
-      '聚餐一般AA制，带好手机支付',
-      '如有忌口提前告知组织者',
-      '适量饮酒，切勿贪杯',
-      '饭后注意安全回家',
-    ],
-  },
-  '探店': {
-    items: [
-      { name: '手机+充电宝', icon: '📱', checked: false, category: '电子' },
-      { name: '相机（可选）', icon: '📷', checked: false, category: '电子' },
-      { name: '口罩（可选）', icon: '😷', checked: false, category: '防护' },
-      { name: '纸巾/湿巾', icon: '🧻', checked: false, category: '其他' },
-      { name: '口香糖/薄荷糖', icon: '🍬', checked: false, category: '其他' },
-      { name: '雨伞（看天气）', icon: '☂️', checked: false, category: '其他' },
-    ],
-    transportOptions: [
-      { type: '地铁', icon: '🚇', duration: '约35分钟', risk: 'low', description: '推荐，商圈附近都有地铁' },
-      { type: '公交', icon: '🚌', duration: '约50分钟', risk: 'medium', description: '可能堵车' },
-      { type: '打车', icon: '🚕', duration: '约20分钟', risk: 'medium', description: '商圈附近打车方便' },
-      { type: '步行', icon: '🚶', duration: '约15分钟', risk: 'low', description: '住得近可步行' },
-    ],
-    tips: [
-      '提前了解店铺营业时间',
-      '网红店可能需要排队，早点到',
-      '拍照注意礼貌，不要影响其他顾客',
-      '探店后可以写评价分享',
-    ],
-  },
-  '其他': {
-    items: [
-      { name: '手机+充电宝', icon: '📱', checked: false, category: '电子' },
-      { name: '身份证', icon: '🪪', checked: false, category: '证件' },
-      { name: '口罩（可选）', icon: '😷', checked: false, category: '防护' },
-      { name: '纸巾', icon: '🧻', checked: false, category: '其他' },
-      { name: '雨伞（看天气）', icon: '☂️', checked: false, category: '其他' },
-    ],
-    transportOptions: [
-      { type: '地铁', icon: '🚇', duration: '约40分钟', risk: 'low', description: '准时可靠' },
-      { type: '公交', icon: '🚌', duration: '约55分钟', risk: 'medium', description: '可能堵车' },
-      { type: '打车', icon: '🚕', duration: '约25分钟', risk: 'low', description: '方便快捷' },
-    ],
-    tips: [
-      '提前了解活动详情',
-      '准时到达集合地点',
-      '保持手机畅通',
-      '有问题及时联系组织者',
-    ],
-  },
-}
+const upcomingActivities = computed(() => {
+  const now = new Date()
+  const registered = registeredActivities.value
+    .filter(a => new Date(a.time) > now)
+    .map(a => ({ ...a, source: 'registered' as const }))
+  
+  const created = createdActivities.value
+    .filter(a => new Date(a.time) > now)
+    .filter(a => !registered.some(r => r.id === a.id))
+    .map(a => ({ ...a, source: 'created' as const }))
+  
+  const all = [...registered, ...created]
+  all.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+  
+  console.log('[Checklist] 未来活动总数:', all.length, 
+    '报名:', registered.length, 
+    '创建:', created.length)
+  
+  return all
+})
 
 const selectedActivity = computed(() => {
   if (!selectedActivityId.value && upcomingActivities.value.length > 0) {
@@ -182,23 +49,23 @@ const selectedActivity = computed(() => {
   return upcomingActivities.value.find(a => a.id === selectedActivityId.value) || null
 })
 
-const upcomingActivities = computed(() => {
-  const now = new Date()
-  return registeredActivities.value
-    .filter(a => new Date(a.time) > now)
-    .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+const checklistData = computed<ActivityChecklist | null>(() => {
+  if (!selectedActivity.value) return null
+  return getChecklistByType(selectedActivity.value.type)
 })
 
-const checklistData = computed(() => {
-  if (!selectedActivity.value) return null
-  const type = selectedActivity.value.type
-  return typeChecklistConfig[type] || typeChecklistConfig['其他']
+const currentItems = computed(() => {
+  if (!selectedActivity.value || !checklistData.value) return []
+  const id = selectedActivity.value.id
+  if (!checklistItemMap.value[id]) {
+    checklistItemMap.value[id] = cloneChecklistItems(checklistData.value.items)
+  }
+  return checklistItemMap.value[id]
 })
 
 const itemsByCategory = computed(() => {
-  if (!checklistData.value) return {}
   const categories: Record<string, ChecklistItem[]> = {}
-  checklistData.value.items.forEach(item => {
+  currentItems.value.forEach(item => {
     if (!categories[item.category]) {
       categories[item.category] = []
     }
@@ -207,15 +74,11 @@ const itemsByCategory = computed(() => {
   return categories
 })
 
-const checkedCount = computed(() => {
-  if (!checklistData.value) return 0
-  return checklistData.value.items.filter(item => item.checked).length
-})
+const checkedCount = computed(() => 
+  currentItems.value.filter(item => item.checked).length
+)
 
-const totalCount = computed(() => {
-  if (!checklistData.value) return 0
-  return checklistData.value.items.length
-})
+const totalCount = computed(() => currentItems.value.length)
 
 const progressPercent = computed(() => {
   if (totalCount.value === 0) return 0
@@ -312,12 +175,21 @@ const getRiskText = (risk: string) => {
 async function loadActivities() {
   loading.value = true
   try {
-    registeredActivities.value = await getRegisteredActivities(CURRENT_USER_ID)
+    const [registered, created] = await Promise.all([
+      getRegisteredActivities(CURRENT_USER_ID),
+      getActivitiesByCreator(CURRENT_USER_ID),
+    ])
+    registeredActivities.value = registered
+    createdActivities.value = created
+    
+    console.log('[Checklist] 数据加载完成 - 报名活动数:', registered.length, 
+      '创建活动数:', created.length)
+    
     if (upcomingActivities.value.length > 0) {
       selectedActivityId.value = upcomingActivities.value[0].id
     }
   } catch (error) {
-    console.error('Failed to load activities:', error)
+    console.error('[Checklist] 加载活动失败:', error)
   } finally {
     loading.value = false
   }
@@ -330,6 +202,15 @@ function toggleItem(item: ChecklistItem) {
 function selectActivity(id: number) {
   selectedActivityId.value = id
 }
+
+watch(selectedActivityId, () => {
+  if (selectedActivity.value && checklistData.value) {
+    const id = selectedActivity.value.id
+    if (!checklistItemMap.value[id]) {
+      checklistItemMap.value[id] = cloneChecklistItems(checklistData.value.items)
+    }
+  }
+})
 
 onMounted(() => {
   loadActivities()
@@ -346,23 +227,48 @@ onMounted(() => {
         <p class="text-gray-500 mt-1">出发前，检查一下你都准备好了吗？</p>
       </div>
       
-      <div v-if="loading" class="flex items-center justify-center py-20">
+      <div v-if="loading" class="flex flex-col items-center justify-center py-20">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
         <p class="mt-4 text-gray-500">加载中...</p>
       </div>
       
-      <div v-else-if="upcomingActivities.length === 0" class="text-center py-20">
+      <div v-else-if="upcomingActivities.length === 0" class="text-center py-16">
         <div class="text-6xl mb-4">🎉</div>
         <h3 class="text-xl font-semibold text-gray-700 mb-2">暂无即将开始的活动</h3>
-        <p class="text-gray-500">去首页发现有趣的活动吧</p>
+        <p class="text-gray-500 mb-6">去首页发现有趣的活动吧</p>
+        <button 
+          @click="$router.push('/')"
+          class="px-6 py-2.5 bg-gradient-to-r from-primary to-orange-400 text-white rounded-xl hover:from-primary/90 hover:to-orange-500/90 transition-all font-medium"
+        >
+          去发现活动
+        </button>
+        
+        <div class="mt-12 text-left">
+          <p class="text-sm text-gray-400 mb-4 text-center">💡 先看看不同类型活动的准备清单</p>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <button
+              v-for="(config, type) in {徒步: null, 打球: null, 桌游: null, 聚餐: null, 探店: null, 其他: null}"
+              :key="type"
+              @click="() => {}"
+              :class="[
+                'p-4 rounded-xl bg-white shadow-sm hover:shadow transition-all text-center',
+              ]"
+            >
+              <div class="text-3xl mb-2">
+                {{ type === '徒步' ? '🥾' : type === '打球' ? '🏀' : type === '桌游' ? '🎲' : type === '聚餐' ? '🍻' : type === '探店' ? '☕' : '📌' }}
+              </div>
+              <p class="text-sm font-medium text-gray-700">{{ type }}</p>
+            </button>
+          </div>
+        </div>
       </div>
       
       <div v-else class="grid lg:grid-cols-3 gap-6">
         <div class="lg:col-span-1">
           <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div class="p-4 border-b border-gray-100">
-              <h3 class="font-semibold text-gray-900">我报名的活动</h3>
-              <p class="text-sm text-gray-500 mt-1">共 {{ upcomingActivities.length }} 个活动</p>
+              <h3 class="font-semibold text-gray-900">即将开始的活动</h3>
+              <p class="text-sm text-gray-500 mt-1">共 {{ upcomingActivities.length }} 个</p>
             </div>
             <div class="divide-y divide-gray-50 max-h-96 overflow-y-auto">
               <button
@@ -379,9 +285,17 @@ onMounted(() => {
                     <img :src="activity.image" :alt="activity.title" class="w-full h-full object-cover" />
                   </div>
                   <div class="flex-1 min-w-0">
-                    <span :class="['inline-block px-2 py-0.5 rounded-full text-xs font-medium mb-1', getTypeColor(activity.type)]">
-                      {{ activity.type }}
-                    </span>
+                    <div class="flex items-center gap-2 mb-1">
+                      <span :class="['inline-block px-2 py-0.5 rounded-full text-xs font-medium', getTypeColor(activity.type)]">
+                        {{ activity.type }}
+                      </span>
+                      <span 
+                        v-if="activity.source === 'created'" 
+                        class="text-xs text-gray-400"
+                      >
+                        我发布的
+                      </span>
+                    </div>
                     <h4 class="font-medium text-gray-900 truncate">{{ activity.title }}</h4>
                     <p class="text-sm text-gray-500 mt-1">
                       {{ new Date(activity.time).toLocaleString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }) }}
@@ -399,9 +313,17 @@ onMounted(() => {
               <img :src="selectedActivity.image" :alt="selectedActivity.title" class="w-full h-full object-cover" />
               <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
               <div class="absolute bottom-4 left-6 right-6">
-                <span :class="['inline-block px-3 py-1 rounded-full text-sm font-medium mb-2', getTypeColor(selectedActivity.type)]">
-                  {{ selectedActivity.type }}
-                </span>
+                <div class="flex items-center gap-2 mb-2">
+                  <span :class="['inline-block px-3 py-1 rounded-full text-sm font-medium', getTypeColor(selectedActivity.type)]">
+                    {{ selectedActivity.type }}
+                  </span>
+                  <span 
+                    v-if="(selectedActivity as any).source === 'created'" 
+                    class="inline-block px-2 py-1 rounded-full text-xs font-medium bg-white/30 text-white"
+                  >
+                    我发布的
+                  </span>
+                </div>
                 <h2 class="text-xl font-bold text-white">{{ selectedActivity.title }}</h2>
               </div>
             </div>
