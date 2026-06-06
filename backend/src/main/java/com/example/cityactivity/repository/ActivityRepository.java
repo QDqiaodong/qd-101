@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
@@ -47,4 +48,18 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     
     @Query("SELECT a FROM Activity a WHERE a.createdAt >= :startTime ORDER BY a.views DESC")
     List<Activity> findPopularActivitiesSince(@Param("startTime") LocalDateTime startTime);
+    
+    long countByCreatorIdAndCreatedAtAfter(Long creatorId, LocalDateTime startTime);
+    
+    Optional<Activity> findTopByCreatorIdOrderByCreatedAtDesc(Long creatorId);
+    
+    List<Activity> findByCreatorIdAndCreatedAtAfter(Long creatorId, LocalDateTime startTime);
+    
+    @Query("SELECT a FROM Activity a WHERE a.creator.id = :creatorId AND a.type = :type AND a.city = :city AND a.location = :location AND a.createdAt >= :startTime")
+    List<Activity> findSimilarActivities(
+            @Param("creatorId") Long creatorId,
+            @Param("type") String type,
+            @Param("city") String city,
+            @Param("location") String location,
+            @Param("startTime") LocalDateTime startTime);
 }

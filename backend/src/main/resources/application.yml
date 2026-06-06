@@ -53,3 +53,10 @@ logging:
     com.example.cityactivity: DEBUG
     org.springframework.web: DEBUG
     org.springframework.cache: DEBUG
+
+activity:
+  publish:
+    cooldown-seconds: 300
+    daily-limit: 10
+    similar-content-window-hours: 24
+    similar-title-threshold: 0.7

@@ -9,6 +9,7 @@ import com.example.cityactivity.exception.ResourceNotFoundException;
 import com.example.cityactivity.repository.ActivityRepository;
 import com.example.cityactivity.repository.RegistrationRepository;
 import com.example.cityactivity.service.ActivityService;
+import com.example.cityactivity.service.PublishRateLimitService;
 import com.example.cityactivity.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,11 +30,14 @@ public class ActivityServiceImpl implements ActivityService {
     private final ActivityRepository activityRepository;
     private final UserService userService;
     private final RegistrationRepository registrationRepository;
+    private final PublishRateLimitService publishRateLimitService;
     
     @Override
     @Transactional
     @CacheEvict(value = {"activities", "hot_activities", "user_activities"}, allEntries = true)
     public ActivityResponse createActivity(ActivityCreateRequest request) {
+        publishRateLimitService.checkPublishRate(request.getCreatorId(), request);
+        
         User creator = userService.findById(request.getCreatorId());
         
         Activity activity = Activity.builder()
