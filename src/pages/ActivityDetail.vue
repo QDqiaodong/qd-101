@@ -2,7 +2,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
-import { getActivityById, registerActivity, cancelRegistration, checkRegistration, getRegisteredActivities, type Activity } from '@/api/index'
+import { 
+  getActivityById, 
+  registerActivity, 
+  cancelRegistration, 
+  checkRegistration, 
+  getRegisteredActivities, 
+  getRegistrationStatus,
+  getWaitlistPosition,
+  getWaitlist,
+  type Activity,
+  type RegistrationStatus as RegStatus,
+  type WaitlistUser
+} from '@/api/index'
 import { matchDistrictByLocation } from '@/data/locationData'
 
 const route = useRoute()
@@ -13,6 +25,9 @@ const CURRENT_USER_ID = 2
 const activityId = Number(route.params.id)
 const activity = ref<Activity | null>(null)
 const isRegistered = ref(false)
+const regStatus = ref<RegStatus>('NOT_REGISTERED')
+const waitlistPosition = ref<number | null>(null)
+const waitlist = ref<WaitlistUser[]>([])
 const isFull = ref(false)
 const isCreator = ref(false)
 const loading = ref(true)
@@ -94,6 +109,9 @@ async function loadActivity() {
   try {
     activity.value = await getActivityById(activityId)
     isRegistered.value = await checkRegistration(activityId, CURRENT_USER_ID)
+    regStatus.value = await getRegistrationStatus(activityId, CURRENT_USER_ID)
+    waitlistPosition.value = await getWaitlistPosition(activityId, CURRENT_USER_ID)
+    waitlist.value = await getWaitlist(activityId)
     isFull.value = activity.value.currentParticipants >= activity.value.maxParticipants
     isCreator.value = activity.value.creatorId === CURRENT_USER_ID
     registeredActivities.value = await getRegisteredActivities(CURRENT_USER_ID)
@@ -105,15 +123,14 @@ async function loadActivity() {
 }
 
 const handleRegister = async () => {
-  if (isFull.value) {
-    alert('活动名额已满')
-    return
-  }
-  
   try {
     await registerActivity(activityId, CURRENT_USER_ID)
-    alert('报名成功！')
     await loadActivity()
+    if (regStatus.value === 'WAITLISTED') {
+      alert(`候补报名成功！您当前是第 ${waitlistPosition.value} 位候补，有人取消时会自动补上。`)
+    } else {
+      alert('报名成功！')
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : '报名失败，请稍后重试'
     alert(message)
@@ -245,11 +262,30 @@ onMounted(() => {
               <div>
                 <p class="text-sm text-gray-500">报名人数</p>
                 <p class="font-medium text-gray-900">{{ activity.currentParticipants }}/{{ activity.maxParticipants }}人</p>
+                <p v-if="activity.waitlistCount && activity.waitlistCount > 0" class="text-xs text-orange-500 mt-1">
+                  候补 {{ activity.waitlistCount }} 人
+                </p>
               </div>
             </div>
           </div>
           
           <div class="space-y-6">
+            <div v-if="regStatus === 'WAITLISTED'" class="p-4 bg-orange-50 border border-orange-200 rounded-xl">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-medium text-orange-800">您已加入候补队列</p>
+                  <p class="text-sm text-orange-600 mt-1">
+                    当前是第 <span class="font-bold">{{ waitlistPosition }}</span> 位候补，有人取消报名时会自动按顺序补上
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             <div>
               <h2 class="text-lg font-semibold text-gray-900 mb-3">活动介绍</h2>
               <p class="text-gray-600 leading-relaxed">{{ activity.description }}</p>
@@ -259,6 +295,30 @@ onMounted(() => {
               <h2 class="text-lg font-semibold text-gray-900 mb-3">报名要求</h2>
               <div class="bg-gray-50 rounded-xl p-4">
                 <p class="text-gray-600">{{ activity.requirements }}</p>
+              </div>
+            </div>
+            
+            <div v-if="waitlist.length > 0" class="mt-6">
+              <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                候补队列 
+                <span class="text-sm font-normal text-gray-500">({{ waitlist.length }}人)</span>
+              </h2>
+              <div class="bg-gray-50 rounded-xl p-4">
+                <div class="space-y-3">
+                  <div 
+                    v-for="(user, index) in waitlist" 
+                    :key="user.userId"
+                    class="flex items-center gap-3"
+                  >
+                    <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span class="text-sm font-medium text-orange-600">{{ user.waitlistPosition }}</span>
+                    </div>
+                    <span class="text-gray-700">{{ user.userName }}</span>
+                    <span v-if="index === 0" class="ml-auto text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      下一位补位
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -284,18 +344,25 @@ onMounted(() => {
                   我发布的活动
                 </button>
                 <button
-                  v-else-if="isRegistered"
+                  v-else-if="regStatus === 'CONFIRMED'"
                   @click="handleCancel"
                   class="flex-1 sm:flex-none px-8 py-3 border-2 border-primary text-primary rounded-xl hover:bg-primary/5 transition-colors"
                 >
                   取消报名
                 </button>
                 <button
-                  v-else-if="isFull"
-                  disabled
-                  class="flex-1 sm:flex-none px-8 py-3 bg-gray-200 text-gray-500 rounded-xl cursor-not-allowed"
+                  v-else-if="regStatus === 'WAITLISTED'"
+                  @click="handleCancel"
+                  class="flex-1 sm:flex-none px-8 py-3 border-2 border-orange-400 text-orange-500 rounded-xl hover:bg-orange-50 transition-colors"
                 >
-                  名额已满
+                  取消候补 (第{{ waitlistPosition }}位)
+                </button>
+                <button
+                  v-else-if="isFull"
+                  @click="handleRegister"
+                  class="flex-1 sm:flex-none px-8 py-3 bg-gradient-to-r from-orange-400 to-yellow-400 text-white rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all font-medium shadow-lg shadow-orange-200"
+                >
+                  候补报名
                 </button>
                 <button
                   v-else

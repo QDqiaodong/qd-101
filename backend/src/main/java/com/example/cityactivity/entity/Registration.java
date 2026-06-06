@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Builder.Default;
 
 import java.time.LocalDateTime;
 
@@ -35,4 +36,11 @@ public class Registration {
     private Boolean cancelled;
     
     private LocalDateTime cancelledAt;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private RegistrationStatus status = RegistrationStatus.CONFIRMED;
+    
+    private Integer waitlistPosition;
 }

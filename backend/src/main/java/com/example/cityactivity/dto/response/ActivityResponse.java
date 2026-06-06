@@ -28,4 +28,5 @@ public class ActivityResponse {
     private LocalDateTime createdAt;
     private Long creatorId;
     private String creatorName;
+    private Integer waitlistCount;
 }

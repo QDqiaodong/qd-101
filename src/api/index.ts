@@ -19,6 +19,15 @@ export interface Activity {
   createdAt: string
   creatorId: number
   creatorName: string
+  waitlistCount?: number
+}
+
+export type RegistrationStatus = 'CONFIRMED' | 'WAITLISTED' | 'CANCELLED' | 'NOT_REGISTERED'
+
+export interface WaitlistUser {
+  userId: number
+  userName: string
+  waitlistPosition: number
 }
 
 export interface ApiResponse<T> {
@@ -205,6 +214,43 @@ export async function checkRegistration(activityId: number, userId: number): Pro
       r => parseInt(r.activityId.replace('act-', '')) === activityId && 
            parseInt(r.userId.replace('user-', '')) === userId
     )
+  }
+}
+
+export async function getRegistrationStatus(activityId: number, userId: number): Promise<RegistrationStatus> {
+  try {
+    const response = await fetch(`${BASE_URL}/registrations/status?activityId=${activityId}&userId=${userId}`)
+    const result: ApiResponse<RegistrationStatus> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for registration status')
+    const isReg = mockRegistrations.some(
+      r => parseInt(r.activityId.replace('act-', '')) === activityId && 
+           parseInt(r.userId.replace('user-', '')) === userId
+    )
+    return isReg ? 'CONFIRMED' : 'NOT_REGISTERED'
+  }
+}
+
+export async function getWaitlistPosition(activityId: number, userId: number): Promise<number | null> {
+  try {
+    const response = await fetch(`${BASE_URL}/registrations/waitlist-position?activityId=${activityId}&userId=${userId}`)
+    const result: ApiResponse<number | null> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for waitlist position')
+    return null
+  }
+}
+
+export async function getWaitlist(activityId: number): Promise<WaitlistUser[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/registrations/waitlist/${activityId}`)
+    const result: ApiResponse<WaitlistUser[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for waitlist')
+    return []
   }
 }
 

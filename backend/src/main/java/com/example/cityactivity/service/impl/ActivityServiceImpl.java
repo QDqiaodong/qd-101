@@ -3,9 +3,11 @@ package com.example.cityactivity.service.impl;
 import com.example.cityactivity.dto.request.ActivityCreateRequest;
 import com.example.cityactivity.dto.response.ActivityResponse;
 import com.example.cityactivity.entity.Activity;
+import com.example.cityactivity.entity.RegistrationStatus;
 import com.example.cityactivity.entity.User;
 import com.example.cityactivity.exception.ResourceNotFoundException;
 import com.example.cityactivity.repository.ActivityRepository;
+import com.example.cityactivity.repository.RegistrationRepository;
 import com.example.cityactivity.service.ActivityService;
 import com.example.cityactivity.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class ActivityServiceImpl implements ActivityService {
     
     private final ActivityRepository activityRepository;
     private final UserService userService;
+    private final RegistrationRepository registrationRepository;
     
     @Override
     @Transactional
@@ -162,6 +165,8 @@ public class ActivityServiceImpl implements ActivityService {
     }
     
     private ActivityResponse toResponse(Activity activity) {
+        Integer waitlistCount = (int) registrationRepository.countByActivityIdAndStatus(
+                activity.getId(), RegistrationStatus.WAITLISTED);
         return ActivityResponse.builder()
                 .id(activity.getId())
                 .title(activity.getTitle())
@@ -178,6 +183,7 @@ public class ActivityServiceImpl implements ActivityService {
                 .createdAt(activity.getCreatedAt())
                 .creatorId(activity.getCreator().getId())
                 .creatorName(activity.getCreator().getName())
+                .waitlistCount(waitlistCount)
                 .build();
     }
 }

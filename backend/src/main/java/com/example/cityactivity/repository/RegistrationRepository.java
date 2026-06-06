@@ -1,6 +1,7 @@
 package com.example.cityactivity.repository;
 
 import com.example.cityactivity.entity.Registration;
+import com.example.cityactivity.entity.RegistrationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -26,4 +27,19 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     void cancelRegistration(@Param("activityId") Long activityId, @Param("userId") Long userId);
     
     long countByActivityIdAndCancelledFalse(Long activityId);
+    
+    Optional<Registration> findByActivityIdAndUserIdAndStatus(Long activityId, Long userId, RegistrationStatus status);
+    
+    Optional<Registration> findFirstByActivityIdAndStatusOrderByWaitlistPositionAsc(Long activityId, RegistrationStatus status);
+    
+    List<Registration> findByActivityIdAndStatusOrderByWaitlistPositionAsc(Long activityId, RegistrationStatus status);
+    
+    long countByActivityIdAndStatus(Long activityId, RegistrationStatus status);
+    
+    @Query("SELECT COALESCE(MAX(r.waitlistPosition), 0) FROM Registration r WHERE r.activity.id = :activityId AND r.status = :status")
+    Integer findMaxWaitlistPositionByActivityIdAndStatus(@Param("activityId") Long activityId, @Param("status") RegistrationStatus status);
+    
+    @Modifying
+    @Query("UPDATE Registration r SET r.waitlistPosition = r.waitlistPosition - 1 WHERE r.activity.id = :activityId AND r.status = :status AND r.waitlistPosition > :position")
+    void decrementWaitlistPositionsAfter(@Param("activityId") Long activityId, @Param("status") RegistrationStatus status, @Param("position") Integer position);
 }
