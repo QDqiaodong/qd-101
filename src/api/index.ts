@@ -255,10 +255,20 @@ export async function getCreators(
     params.set('sortBy', sortBy)
     
     const response = await fetch(`${BASE_URL}/creators?${params}`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    
     const result: ApiResponse<Creator[]> = await response.json()
+    
+    if (result.code !== 200 || !result.data) {
+      throw new Error(result.message || 'Invalid response')
+    }
+    
     return result.data
   } catch (error) {
-    console.log('Using mock data for creators')
+    console.log('Using mock data for creators:', error)
     let creators = [...mockCreators].map(convertMockCreator)
     
     if (type) {
@@ -282,10 +292,20 @@ export async function getCreators(
 export async function getCreatorById(id: number): Promise<Creator> {
   try {
     const response = await fetch(`${BASE_URL}/creators/${id}`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    
     const result: ApiResponse<Creator> = await response.json()
+    
+    if (result.code !== 200 || !result.data) {
+      throw new Error(result.message || 'Invalid response')
+    }
+    
     return result.data
   } catch (error) {
-    console.log('Using mock data for creator detail')
+    console.log('Using mock data for creator detail:', error)
     const mock = mockCreators.find(c => parseInt(c.id.replace('user-', '')) === id) || mockCreators[0]
     return convertMockCreator(mock)
   }
@@ -294,10 +314,20 @@ export async function getCreatorById(id: number): Promise<Creator> {
 export async function getCreatorActivities(creatorId: number): Promise<Activity[]> {
   try {
     const response = await fetch(`${BASE_URL}/creators/${creatorId}/activities`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    
     const result: ApiResponse<Activity[]> = await response.json()
+    
+    if (result.code !== 200 || !result.data) {
+      throw new Error(result.message || 'Invalid response')
+    }
+    
     return result.data
   } catch (error) {
-    console.log('Using mock data for creator activities')
+    console.log('Using mock data for creator activities:', error)
     return mockActivities
       .filter(a => parseInt(a.creatorId.replace('user-', '')) === creatorId)
       .map(convertMockActivity)
