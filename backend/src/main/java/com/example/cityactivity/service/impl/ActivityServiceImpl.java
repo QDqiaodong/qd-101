@@ -10,8 +10,12 @@ import com.example.cityactivity.entity.User;
 import com.example.cityactivity.exception.ResourceNotFoundException;
 import com.example.cityactivity.repository.ActivityRepository;
 import com.example.cityactivity.repository.RegistrationRepository;
+import com.example.cityactivity.dto.response.ContentReviewResult;
+import com.example.cityactivity.enums.RiskLevel;
+import com.example.cityactivity.exception.BusinessException;
 import com.example.cityactivity.service.ActivityService;
 import com.example.cityactivity.service.ActivitySnapshotService;
+import com.example.cityactivity.service.ContentReviewService;
 import com.example.cityactivity.service.PublishRateLimitService;
 import com.example.cityactivity.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +45,7 @@ public class ActivityServiceImpl implements ActivityService {
     private final RegistrationRepository registrationRepository;
     private final PublishRateLimitService publishRateLimitService;
     private final ActivitySnapshotService activitySnapshotService;
+    private final ContentReviewService contentReviewService;
 
     private static final int SNAPSHOT_FRESHNESS_MINUTES = 30;
     
@@ -49,6 +54,18 @@ public class ActivityServiceImpl implements ActivityService {
     @CacheEvict(value = {"activities", "hot_activities", "user_activities"}, allEntries = true)
     public ActivityResponse createActivity(ActivityCreateRequest request) {
         publishRateLimitService.checkPublishRate(request.getCreatorId(), request);
+
+        ContentReviewResult reviewResult = contentReviewService.reviewActivityContent(request);
+        if (!reviewResult.isPassed()) {
+            log.warn("Activity content review failed for creator {}: {}",
+                    request.getCreatorId(), reviewResult.getSuggestion());
+            if (reviewResult.getOverallRiskLevel() == RiskLevel.HIGH) {
+                throw new BusinessException("内容审核未通过：" + reviewResult.getSuggestion());
+            }
+            if (reviewResult.getOverallRiskLevel() == RiskLevel.MEDIUM) {
+                throw new BusinessException("内容存在风险，需人工审核：" + reviewResult.getSuggestion());
+            }
+        }
         
         User creator = userService.findById(request.getCreatorId());
         
