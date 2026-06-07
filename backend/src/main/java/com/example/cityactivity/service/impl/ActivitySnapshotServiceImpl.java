@@ -1,6 +1,8 @@
 package com.example.cityactivity.service.impl;
 
+import com.example.cityactivity.config.SnapshotPriorityProperties;
 import com.example.cityactivity.dto.response.ActivityTrajectoryDTO;
+import com.example.cityactivity.dto.response.CityActivityScoreDTO;
 import com.example.cityactivity.dto.response.CityHotSnapshotDTO;
 import com.example.cityactivity.dto.response.HotSnapshotDTO;
 import com.example.cityactivity.entity.Activity;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,11 +29,12 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
 
     private final ActivityRepository activityRepository;
     private final ActivityHotSnapshotRepository snapshotRepository;
+    private final SnapshotPriorityProperties priorityProperties;
 
     @Value("${activity.snapshot.top-n:20}")
     private int topN;
 
-    @Value("${activity.snapshot.time-slice-format:yyyyMMddHH}")
+    @Value("${activity.snapshot.time-slice-format:yyyyMMddHHmm}")
     private String timeSliceFormat;
 
     @Override
@@ -215,6 +219,227 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
 
         newlyEntered.sort(Comparator.comparing(t -> t.getFirstEnteredHotListAt()));
         return newlyEntered;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CityActivityScoreDTO> calculateCityActivityScores() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Object[]> stats = activityRepository.getCityActivityStats(now);
+
+        if (stats.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        long maxParticipants = 1;
+        long maxViews = 1;
+        long maxActivities = 1;
+
+        for (Object[] row : stats) {
+            long activityCount = ((Number) row[1]).longValue();
+            long totalParticipants = row[2] != null ? ((Number) row[2]).longValue() : 0;
+            long totalViews = row[3] != null ? ((Number) row[3]).longValue() : 0;
+
+            maxActivities = Math.max(maxActivities, activityCount);
+            maxParticipants = Math.max(maxParticipants, totalParticipants);
+            maxViews = Math.max(maxViews, totalViews);
+        }
+
+        List<CityActivityScoreDTO> scores = new ArrayList<>();
+        for (Object[] row : stats) {
+            String city = (String) row[0];
+            long activityCount = ((Number) row[1]).longValue();
+            long totalParticipants = row[2] != null ? ((Number) row[2]).longValue() : 0;
+            long totalViews = row[3] != null ? ((Number) row[3]).longValue() : 0;
+
+            double activityScore = (double) activityCount / maxActivities * 0.3;
+            double participantScore = (double) totalParticipants / maxParticipants * 0.5;
+            double viewScore = (double) totalViews / maxViews * 0.2;
+            double totalScore = activityScore + participantScore + viewScore;
+
+            scores.add(CityActivityScoreDTO.builder()
+                    .city(city)
+                    .activityCount(activityCount)
+                    .totalParticipants(totalParticipants)
+                    .totalViews(totalViews)
+                    .score(totalScore)
+                    .build());
+        }
+
+        scores.sort((a, b) -> Double.compare(b.getScore(), a.getScore()));
+
+        int totalCities = scores.size();
+        int highTierCount = (int) Math.ceil(totalCities * priorityProperties.getHighTierRatio());
+        int mediumTierCount = (int) Math.ceil(totalCities * priorityProperties.getMediumTierRatio());
+
+        for (int i = 0; i < scores.size(); i++) {
+            if (i < highTierCount) {
+                scores.get(i).setPriorityTier(CityActivityScoreDTO.PriorityTier.HIGH);
+            } else if (i < highTierCount + mediumTierCount) {
+                scores.get(i).setPriorityTier(CityActivityScoreDTO.PriorityTier.MEDIUM);
+            } else {
+                scores.get(i).setPriorityTier(CityActivityScoreDTO.PriorityTier.LOW);
+            }
+        }
+
+        return scores;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getCitiesByPriorityTier(CityActivityScoreDTO.PriorityTier tier) {
+        return calculateCityActivityScores().stream()
+                .filter(score -> score.getPriorityTier() == tier)
+                .map(CityActivityScoreDTO::getCity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getCitiesWithSoonStartingActivities(int hours) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endTime = now.plusHours(hours);
+        return activityRepository.findCitiesWithActivitiesStartingBetween(now, endTime);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> detectBurstCities() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lookbackTime = now.minusMinutes(priorityProperties.getBurstLookbackMinutes());
+        List<String> allCities = activityRepository.findDistinctCities();
+        List<String> burstCities = new ArrayList<>();
+
+        for (String city : allCities) {
+            if (isBurstCity(city, lookbackTime, now)) {
+                burstCities.add(city);
+            }
+        }
+
+        return burstCities;
+    }
+
+    private boolean isBurstCity(String city, LocalDateTime lookbackTime, LocalDateTime now) {
+        List<ActivityHotSnapshot> recentSnapshots = snapshotRepository.findLatestByCityAndTimeAfter(city, lookbackTime);
+
+        if (recentSnapshots.size() < 2) {
+            return false;
+        }
+
+        Map<Long, Integer> earliestParticipants = new HashMap<>();
+        Map<Long, Integer> latestParticipants = new HashMap<>();
+
+        for (ActivityHotSnapshot snapshot : recentSnapshots) {
+            Long activityId = snapshot.getActivityId();
+            int participants = snapshot.getCurrentParticipants();
+
+            earliestParticipants.putIfAbsent(activityId, participants);
+            latestParticipants.put(activityId, participants);
+        }
+
+        int totalGrowth = 0;
+        int totalBase = 0;
+
+        for (Map.Entry<Long, Integer> entry : earliestParticipants.entrySet()) {
+            Long activityId = entry.getKey();
+            int base = entry.getValue();
+            int current = latestParticipants.getOrDefault(activityId, base);
+            int growth = current - base;
+
+            totalGrowth += growth;
+            totalBase += base;
+        }
+
+        if (totalBase == 0) {
+            return false;
+        }
+
+        double growthRate = (double) totalGrowth / totalBase;
+        return growthRate >= priorityProperties.getBurstGrowthThreshold();
+    }
+
+    @Override
+    @Transactional
+    public void createPrioritySnapshots() {
+        List<CityActivityScoreDTO> scores = calculateCityActivityScores();
+
+        List<String> criticalStartingCities = getCitiesWithSoonStartingActivities(
+                priorityProperties.getCriticalStartingHours());
+        List<String> burstCities = detectBurstCities();
+
+        Set<String> citiesToRefresh = new LinkedHashSet<>();
+
+        for (CityActivityScoreDTO score : scores) {
+            String city = score.getCity();
+            if (needsRefresh(city, score.getPriorityTier())) {
+                citiesToRefresh.add(city);
+            }
+        }
+
+        for (String city : criticalStartingCities) {
+            if (needsRefreshForCriticalStart(city)) {
+                citiesToRefresh.add(city);
+            }
+        }
+
+        for (String city : burstCities) {
+            citiesToRefresh.add(city);
+        }
+
+        log.info("Priority snapshot refresh: {} cities scheduled (tier-based + {} critical-starting + {} burst)",
+                citiesToRefresh.size(), criticalStartingCities.size(), burstCities.size());
+
+        for (String city : citiesToRefresh) {
+            try {
+                createSnapshotForCity(city);
+            } catch (Exception e) {
+                log.error("Failed to create priority snapshot for city {}", city, e);
+            }
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean needsRefresh(String city) {
+        List<CityActivityScoreDTO> scores = calculateCityActivityScores();
+        CityActivityScoreDTO.PriorityTier tier = scores.stream()
+                .filter(s -> s.getCity().equals(city))
+                .map(CityActivityScoreDTO::getPriorityTier)
+                .findFirst()
+                .orElse(CityActivityScoreDTO.PriorityTier.LOW);
+        return needsRefresh(city, tier);
+    }
+
+    private boolean needsRefresh(String city, CityActivityScoreDTO.PriorityTier tier) {
+        LocalDateTime lastSnapshotTime = snapshotRepository.findLatestSnapshotTimeByCity(city);
+
+        if (lastSnapshotTime == null) {
+            return true;
+        }
+
+        int intervalMinutes = switch (tier) {
+            case HIGH -> priorityProperties.getHighTierIntervalMinutes();
+            case MEDIUM -> priorityProperties.getMediumTierIntervalMinutes();
+            case LOW -> priorityProperties.getLowTierIntervalMinutes();
+        };
+
+        LocalDateTime now = LocalDateTime.now();
+        long minutesSinceLastSnapshot = ChronoUnit.MINUTES.between(lastSnapshotTime, now);
+
+        return minutesSinceLastSnapshot >= intervalMinutes;
+    }
+
+    private boolean needsRefreshForCriticalStart(String city) {
+        LocalDateTime lastSnapshotTime = snapshotRepository.findLatestSnapshotTimeByCity(city);
+
+        if (lastSnapshotTime == null) {
+            return true;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        long minutesSinceLastSnapshot = ChronoUnit.MINUTES.between(lastSnapshotTime, now);
+
+        return minutesSinceLastSnapshot >= 10;
     }
 
     private ActivityTrajectoryDTO buildTrajectoryDTO(Long activityId, List<ActivityHotSnapshot> snapshots) {

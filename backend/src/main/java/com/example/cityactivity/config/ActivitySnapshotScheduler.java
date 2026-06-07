@@ -15,12 +15,23 @@ public class ActivitySnapshotScheduler {
 
     @Scheduled(cron = "${activity.snapshot.cron:0 0 * * * *}")
     public void createHourlySnapshot() {
-        log.info("Starting scheduled hot activity snapshot task");
+        log.info("Starting scheduled full hot activity snapshot task");
         try {
             activitySnapshotService.createSnapshotForAllCities();
-            log.info("Scheduled hot activity snapshot task completed");
+            log.info("Scheduled full hot activity snapshot task completed");
         } catch (Exception e) {
-            log.error("Scheduled hot activity snapshot task failed", e);
+            log.error("Scheduled full hot activity snapshot task failed", e);
+        }
+    }
+
+    @Scheduled(cron = "${activity.snapshot.priority-cron:0 */15 * * * *}")
+    public void createPrioritySnapshot() {
+        log.info("Starting priority-based hot activity snapshot task");
+        try {
+            activitySnapshotService.createPrioritySnapshots();
+            log.info("Priority-based hot activity snapshot task completed");
+        } catch (Exception e) {
+            log.error("Priority-based hot activity snapshot task failed", e);
         }
     }
 }

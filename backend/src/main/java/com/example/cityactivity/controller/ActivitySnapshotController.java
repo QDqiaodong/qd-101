@@ -2,6 +2,7 @@ package com.example.cityactivity.controller;
 
 import com.example.cityactivity.dto.response.ActivityTrajectoryDTO;
 import com.example.cityactivity.dto.response.ApiResponse;
+import com.example.cityactivity.dto.response.CityActivityScoreDTO;
 import com.example.cityactivity.dto.response.CityHotSnapshotDTO;
 import com.example.cityactivity.service.ActivitySnapshotService;
 import lombok.RequiredArgsConstructor;
@@ -85,5 +86,36 @@ public class ActivitySnapshotController {
     public ResponseEntity<ApiResponse<String>> triggerSnapshotForCity(@PathVariable String city) {
         activitySnapshotService.createSnapshotForCity(city);
         return ResponseEntity.ok(ApiResponse.success("Snapshot triggered for city: " + city));
+    }
+
+    @GetMapping("/city-scores")
+    public ResponseEntity<ApiResponse<List<CityActivityScoreDTO>>> getCityActivityScores() {
+        List<CityActivityScoreDTO> scores = activitySnapshotService.calculateCityActivityScores();
+        return ResponseEntity.ok(ApiResponse.success(scores));
+    }
+
+    @GetMapping("/burst-cities")
+    public ResponseEntity<ApiResponse<List<String>>> getBurstCities() {
+        List<String> burstCities = activitySnapshotService.detectBurstCities();
+        return ResponseEntity.ok(ApiResponse.success(burstCities));
+    }
+
+    @GetMapping("/soon-starting-cities")
+    public ResponseEntity<ApiResponse<List<String>>> getSoonStartingCities(
+            @RequestParam(defaultValue = "6") int hours) {
+        List<String> cities = activitySnapshotService.getCitiesWithSoonStartingActivities(hours);
+        return ResponseEntity.ok(ApiResponse.success(cities));
+    }
+
+    @PostMapping("/trigger-priority")
+    public ResponseEntity<ApiResponse<String>> triggerPrioritySnapshot() {
+        activitySnapshotService.createPrioritySnapshots();
+        return ResponseEntity.ok(ApiResponse.success("Priority snapshot triggered successfully"));
+    }
+
+    @GetMapping("/cities/{city}/needs-refresh")
+    public ResponseEntity<ApiResponse<Boolean>> checkNeedsRefresh(@PathVariable String city) {
+        boolean needsRefresh = activitySnapshotService.needsRefresh(city);
+        return ResponseEntity.ok(ApiResponse.success(needsRefresh));
     }
 }

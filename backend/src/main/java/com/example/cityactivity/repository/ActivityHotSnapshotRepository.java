@@ -43,4 +43,13 @@ public interface ActivityHotSnapshotRepository extends JpaRepository<ActivityHot
     Integer findBestRankByActivityId(@Param("activityId") Long activityId);
 
     boolean existsByCityAndTimeSlice(String city, String timeSlice);
+
+    @Query("SELECT MAX(s.snapshotTime) FROM ActivityHotSnapshot s WHERE s.city = :city")
+    LocalDateTime findLatestSnapshotTimeByCity(@Param("city") String city);
+
+    @Query("SELECT s FROM ActivityHotSnapshot s WHERE s.city = :city AND s.snapshotTime >= :startTime ORDER BY s.snapshotTime ASC")
+    List<ActivityHotSnapshot> findLatestByCityAndTimeAfter(@Param("city") String city, @Param("startTime") LocalDateTime startTime);
+
+    @Query("SELECT s.city, SUM(s.currentParticipants) FROM ActivityHotSnapshot s WHERE s.snapshotTime = (SELECT MAX(s2.snapshotTime) FROM ActivityHotSnapshot s2 WHERE s2.city = s.city AND s2.activityId = s.activityId) GROUP BY s.city")
+    List<Object[]> getCurrentTotalParticipantsByCity();
 }

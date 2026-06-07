@@ -1,6 +1,7 @@
 package com.example.cityactivity.service;
 
 import com.example.cityactivity.dto.response.ActivityTrajectoryDTO;
+import com.example.cityactivity.dto.response.CityActivityScoreDTO;
 import com.example.cityactivity.dto.response.CityHotSnapshotDTO;
 
 import java.time.LocalDateTime;
@@ -27,4 +28,16 @@ public interface ActivitySnapshotService {
     ActivityTrajectoryDTO getActivityTrajectory(Long activityId, LocalDateTime startTime);
 
     List<ActivityTrajectoryDTO> getNewlyEnteredActivities(String city, int days);
+
+    List<CityActivityScoreDTO> calculateCityActivityScores();
+
+    List<String> getCitiesByPriorityTier(CityActivityScoreDTO.PriorityTier tier);
+
+    List<String> getCitiesWithSoonStartingActivities(int hours);
+
+    List<String> detectBurstCities();
+
+    void createPrioritySnapshots();
+
+    boolean needsRefresh(String city);
 }

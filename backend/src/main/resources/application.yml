@@ -62,5 +62,16 @@ activity:
     similar-title-threshold: 0.7
   snapshot:
     top-n: 20
-    time-slice-format: yyyyMMddHH
+    time-slice-format: yyyyMMddHHmm
     cron: "0 0 * * * *"
+    priority-cron: "0 */15 * * * *"
+    priority:
+      high-tier-ratio: 0.2
+      medium-tier-ratio: 0.3
+      high-tier-interval-minutes: 15
+      medium-tier-interval-minutes: 30
+      low-tier-interval-minutes: 60
+      soon-starting-hours: 6
+      critical-starting-hours: 2
+      burst-growth-threshold: 0.3
+      burst-lookback-minutes: 30
