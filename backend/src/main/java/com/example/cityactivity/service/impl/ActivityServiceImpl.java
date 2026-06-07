@@ -25,6 +25,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -96,20 +98,25 @@ public class ActivityServiceImpl implements ActivityService {
     @Transactional(readOnly = true)
     @Cacheable(value = "activities", key = "'city:' + #city + ':' + #sortBy")
     public List<ActivityResponse> getActivitiesByCity(String city, String sortBy) {
+        List<Activity> activities = activityRepository.findByCity(city);
+
         if ("hot".equals(sortBy)) {
-            List<ActivityResponse> snapshotResult = getHotActivitiesByCityFromSnapshot(city);
-            if (snapshotResult != null && !snapshotResult.isEmpty()) {
-                return snapshotResult;
+            CityHotSnapshotDTO snapshot = getFreshCitySnapshot(city);
+            if (snapshot != null) {
+                activities = sortActivitiesBySnapshot(activities, snapshot);
+            } else {
+                sortActivities(activities, sortBy);
             }
+        } else {
+            sortActivities(activities, sortBy);
         }
 
-        List<Activity> activities = activityRepository.findByCity(city);
-        sortActivities(activities, sortBy);
         return activities.stream().map(this::toResponse).collect(Collectors.toList());
     }
     
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "activities", key = "'type:' + #type + ':' + #sortBy")
     public List<ActivityResponse> getActivitiesByType(String type, String sortBy) {
         List<Activity> activities = activityRepository.findByType(type);
         sortActivities(activities, sortBy);
@@ -118,16 +125,21 @@ public class ActivityServiceImpl implements ActivityService {
     
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "activities", key = "'city_type:' + #city + ':' + #type + ':' + #sortBy")
     public List<ActivityResponse> getActivitiesByCityAndType(String city, String type, String sortBy) {
+        List<Activity> activities = activityRepository.findByCityAndType(city, type);
+
         if ("hot".equals(sortBy)) {
-            List<ActivityResponse> snapshotResult = getHotActivitiesByCityAndTypeFromSnapshot(city, type);
-            if (snapshotResult != null && !snapshotResult.isEmpty()) {
-                return snapshotResult;
+            CityHotSnapshotDTO snapshot = getFreshCitySnapshot(city);
+            if (snapshot != null) {
+                activities = sortActivitiesBySnapshot(activities, snapshot);
+            } else {
+                sortActivities(activities, sortBy);
             }
+        } else {
+            sortActivities(activities, sortBy);
         }
 
-        List<Activity> activities = activityRepository.findByCityAndType(city, type);
-        sortActivities(activities, sortBy);
         return activities.stream().map(this::toResponse).collect(Collectors.toList());
     }
     
@@ -141,8 +153,9 @@ public class ActivityServiceImpl implements ActivityService {
     
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "hot_activities", key = "'top5'")
     public List<ActivityResponse> getHotActivities() {
-        List<ActivityResponse> snapshotResult = getGlobalHotActivitiesFromSnapshot(5);
+        List<ActivityResponse> snapshotResult = getGlobalHotActivitiesFromSnapshot(5, null);
         if (snapshotResult != null && !snapshotResult.isEmpty()) {
             return snapshotResult;
         }
@@ -156,22 +169,28 @@ public class ActivityServiceImpl implements ActivityService {
     
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "hot_activities", key = "'top5:' + #timeRange")
     public List<ActivityResponse> getHotActivities(String timeRange) {
-        if ("realtime".equals(timeRange)) {
-            List<ActivityResponse> snapshotResult = getGlobalHotActivitiesFromSnapshot(5);
-            if (snapshotResult != null && !snapshotResult.isEmpty()) {
-                return snapshotResult;
-            }
-        }
-
-        List<Activity> activities;
         LocalDateTime startTime = switch (timeRange) {
             case "realtime" -> LocalDateTime.now().minusHours(24);
             case "3days" -> LocalDateTime.now().minusDays(3);
             case "7days" -> LocalDateTime.now().minusDays(7);
             default -> null;
         };
-        
+
+        if (startTime != null) {
+            List<ActivityResponse> snapshotResult = getGlobalHotActivitiesFromSnapshot(5, startTime);
+            if (snapshotResult != null && snapshotResult.size() >= 3) {
+                return snapshotResult;
+            }
+        } else {
+            List<ActivityResponse> snapshotResult = getGlobalHotActivitiesFromSnapshot(5, null);
+            if (snapshotResult != null && !snapshotResult.isEmpty()) {
+                return snapshotResult;
+            }
+        }
+
+        List<Activity> activities;
         if (startTime != null) {
             activities = activityRepository.findHotActivitiesSince(startTime);
         } else {
@@ -200,73 +219,42 @@ public class ActivityServiceImpl implements ActivityService {
         }
     }
 
-    private List<ActivityResponse> getHotActivitiesByCityFromSnapshot(String city) {
+    private CityHotSnapshotDTO getFreshCitySnapshot(String city) {
         CityHotSnapshotDTO snapshot = activitySnapshotService.getLatestSnapshot(city);
         if (snapshot == null || snapshot.getRankings() == null || snapshot.getRankings().isEmpty()) {
             return null;
         }
-
         if (!isSnapshotFresh(snapshot.getSnapshotTime())) {
             return null;
         }
-
-        List<Long> activityIds = snapshot.getRankings().stream()
-                .map(HotSnapshotDTO::getActivityId)
-                .collect(Collectors.toList());
-
-        List<Activity> activities = activityRepository.findByIdsWithCreator(activityIds);
-
-        Map<Long, Activity> activityMap = activities.stream()
-                .collect(Collectors.toMap(Activity::getId, a -> a));
-
-        List<Activity> sortedActivities = new ArrayList<>();
-        for (Long id : activityIds) {
-            Activity activity = activityMap.get(id);
-            if (activity != null) {
-                sortedActivities.add(activity);
-            }
-        }
-
-        return sortedActivities.stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return snapshot;
     }
 
-    private List<ActivityResponse> getHotActivitiesByCityAndTypeFromSnapshot(String city, String type) {
-        CityHotSnapshotDTO snapshot = activitySnapshotService.getLatestSnapshot(city);
-        if (snapshot == null || snapshot.getRankings() == null || snapshot.getRankings().isEmpty()) {
-            return null;
+    private List<Activity> sortActivitiesBySnapshot(List<Activity> activities, CityHotSnapshotDTO snapshot) {
+        List<HotSnapshotDTO> rankings = snapshot.getRankings();
+        Map<Long, Integer> rankMap = new HashMap<>();
+        for (int i = 0; i < rankings.size(); i++) {
+            rankMap.put(rankings.get(i).getActivityId(), i);
         }
 
-        if (!isSnapshotFresh(snapshot.getSnapshotTime())) {
-            return null;
-        }
+        List<Activity> snapshotActivities = new ArrayList<>();
+        List<Activity> remainingActivities = new ArrayList<>();
 
-        List<Long> activityIds = snapshot.getRankings().stream()
-                .filter(s -> type.equals(s.getActivityType()))
-                .map(HotSnapshotDTO::getActivityId)
-                .collect(Collectors.toList());
-
-        if (activityIds.isEmpty()) {
-            return null;
-        }
-
-        List<Activity> activities = activityRepository.findByIdsWithCreator(activityIds);
-
-        Map<Long, Activity> activityMap = activities.stream()
-                .collect(Collectors.toMap(Activity::getId, a -> a));
-
-        List<Activity> sortedActivities = new ArrayList<>();
-        for (Long id : activityIds) {
-            Activity activity = activityMap.get(id);
-            if (activity != null) {
-                sortedActivities.add(activity);
+        for (Activity activity : activities) {
+            if (rankMap.containsKey(activity.getId())) {
+                snapshotActivities.add(activity);
+            } else {
+                remainingActivities.add(activity);
             }
         }
 
-        return sortedActivities.stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        snapshotActivities.sort(Comparator.comparingInt(a -> rankMap.get(a.getId())));
+
+        remainingActivities.sort((a, b) -> b.getCurrentParticipants() - a.getCurrentParticipants());
+
+        List<Activity> result = new ArrayList<>(snapshotActivities);
+        result.addAll(remainingActivities);
+        return result;
     }
 
     private boolean isSnapshotFresh(LocalDateTime snapshotTime) {
@@ -277,8 +265,9 @@ public class ActivityServiceImpl implements ActivityService {
         return minutesSince <= SNAPSHOT_FRESHNESS_MINUTES;
     }
 
-    private List<ActivityResponse> getGlobalHotActivitiesFromSnapshot(int limit) {
-        List<HotSnapshotDTO> hotSnapshots = activitySnapshotService.getGlobalHotActivities(limit);
+    private List<ActivityResponse> getGlobalHotActivitiesFromSnapshot(int limit, LocalDateTime startTime) {
+        int fetchLimit = startTime != null ? limit * 3 : limit;
+        List<HotSnapshotDTO> hotSnapshots = activitySnapshotService.getGlobalHotActivities(fetchLimit);
         if (hotSnapshots == null || hotSnapshots.isEmpty()) {
             return null;
         }
@@ -295,8 +284,15 @@ public class ActivityServiceImpl implements ActivityService {
         List<Activity> sortedActivities = new ArrayList<>();
         for (Long id : activityIds) {
             Activity activity = activityMap.get(id);
-            if (activity != null) {
-                sortedActivities.add(activity);
+            if (activity == null) {
+                continue;
+            }
+            if (startTime != null && activity.getCreatedAt().isBefore(startTime)) {
+                continue;
+            }
+            sortedActivities.add(activity);
+            if (sortedActivities.size() >= limit) {
+                break;
             }
         }
 
