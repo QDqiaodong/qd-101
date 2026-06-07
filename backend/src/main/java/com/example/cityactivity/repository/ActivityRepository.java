@@ -62,4 +62,10 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("city") String city,
             @Param("location") String location,
             @Param("startTime") LocalDateTime startTime);
+
+    @Query("SELECT a FROM Activity a JOIN FETCH a.creator WHERE a.city = :city ORDER BY a.currentParticipants DESC")
+    List<Activity> findByCityWithCreatorOrderByParticipantsDesc(@Param("city") String city);
+
+    @Query("SELECT DISTINCT a.city FROM Activity a")
+    List<String> findDistinctCities();
 }

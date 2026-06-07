@@ -60,3 +60,7 @@ activity:
     daily-limit: 10
     similar-content-window-hours: 24
     similar-title-threshold: 0.7
+  snapshot:
+    top-n: 20
+    time-slice-format: yyyyMMddHH
+    cron: "0 0 * * * *"
