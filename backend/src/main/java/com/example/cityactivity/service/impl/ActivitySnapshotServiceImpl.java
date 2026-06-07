@@ -30,6 +30,7 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
     private final ActivityRepository activityRepository;
     private final ActivityHotSnapshotRepository snapshotRepository;
     private final SnapshotPriorityProperties priorityProperties;
+    private final org.springframework.cache.CacheManager cacheManager;
 
     @Value("${activity.snapshot.top-n:20}")
     private int topN;
@@ -79,6 +80,8 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
 
         snapshotRepository.saveAll(snapshots);
         log.info("Created hot snapshot for city {}: {} activities, time slice {}", city, snapshots.size(), timeSlice);
+
+        evictCityCaches(city);
     }
 
     @Override
@@ -224,11 +227,10 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
     @Override
     @Transactional(readOnly = true)
     public List<CityActivityScoreDTO> calculateCityActivityScores() {
-        LocalDateTime now = LocalDateTime.now();
-        List<Object[]> stats = activityRepository.getCityActivityStats(now);
+        List<Object[]> stats = activityRepository.getCityActivityStats();
 
         if (stats.isEmpty()) {
-            return Collections.emptyList();
+            return buildDefaultScoresFromAllCities();
         }
 
         long maxParticipants = 1;
@@ -280,6 +282,28 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
             } else {
                 scores.get(i).setPriorityTier(CityActivityScoreDTO.PriorityTier.LOW);
             }
+        }
+
+        return scores;
+    }
+
+    private List<CityActivityScoreDTO> buildDefaultScoresFromAllCities() {
+        List<String> allCities = activityRepository.findDistinctCities();
+        if (allCities.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<CityActivityScoreDTO> scores = new ArrayList<>();
+        for (String city : allCities) {
+            long count = activityRepository.countByCityAndTimeAfter(city, LocalDateTime.now().minusDays(30));
+            scores.add(CityActivityScoreDTO.builder()
+                    .city(city)
+                    .activityCount(count)
+                    .totalParticipants(0)
+                    .totalViews(0)
+                    .score(0.5)
+                    .priorityTier(CityActivityScoreDTO.PriorityTier.MEDIUM)
+                    .build());
         }
 
         return scores;
@@ -400,6 +424,40 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<HotSnapshotDTO> getGlobalHotActivities(int limit) {
+        List<String> cities = snapshotRepository.findDistinctCities();
+        if (cities.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<HotSnapshotDTO> allHotActivities = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (String city : cities) {
+            CityHotSnapshotDTO citySnapshot = getLatestSnapshot(city);
+            if (citySnapshot != null && citySnapshot.getRankings() != null) {
+                long minutesSince = ChronoUnit.MINUTES.between(citySnapshot.getSnapshotTime(), now);
+                if (minutesSince <= 120) {
+                    allHotActivities.addAll(citySnapshot.getRankings());
+                }
+            }
+        }
+
+        allHotActivities.sort((a, b) -> {
+            int participantCompare = Integer.compare(b.getCurrentParticipants(), a.getCurrentParticipants());
+            if (participantCompare != 0) {
+                return participantCompare;
+            }
+            return Integer.compare(b.getViews(), a.getViews());
+        });
+
+        return allHotActivities.stream()
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean needsRefresh(String city) {
         List<CityActivityScoreDTO> scores = calculateCityActivityScores();
         CityActivityScoreDTO.PriorityTier tier = scores.stream()
@@ -440,6 +498,24 @@ public class ActivitySnapshotServiceImpl implements ActivitySnapshotService {
         long minutesSinceLastSnapshot = ChronoUnit.MINUTES.between(lastSnapshotTime, now);
 
         return minutesSinceLastSnapshot >= 10;
+    }
+
+    private void evictCityCaches(String city) {
+        try {
+            org.springframework.cache.Cache activitiesCache = cacheManager.getCache("activities");
+            if (activitiesCache != null) {
+                activitiesCache.evict("city:" + city + ":hot");
+                activitiesCache.evict("city:" + city + ":popular");
+                activitiesCache.evict("city:" + city + ":newest");
+            }
+
+            org.springframework.cache.Cache hotActivitiesCache = cacheManager.getCache("hot_activities");
+            if (hotActivitiesCache != null) {
+                hotActivitiesCache.clear();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to evict caches for city {}", city, e);
+        }
     }
 
     private ActivityTrajectoryDTO buildTrajectoryDTO(Long activityId, List<ActivityHotSnapshot> snapshots) {

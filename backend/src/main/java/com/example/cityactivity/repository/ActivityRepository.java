@@ -66,11 +66,14 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Query("SELECT a FROM Activity a JOIN FETCH a.creator WHERE a.city = :city ORDER BY a.currentParticipants DESC")
     List<Activity> findByCityWithCreatorOrderByParticipantsDesc(@Param("city") String city);
 
+    @Query("SELECT a FROM Activity a JOIN FETCH a.creator WHERE a.id IN :ids")
+    List<Activity> findByIdsWithCreator(@Param("ids") List<Long> ids);
+
     @Query("SELECT DISTINCT a.city FROM Activity a")
     List<String> findDistinctCities();
 
-    @Query("SELECT a.city, COUNT(a), SUM(a.currentParticipants), SUM(a.views) FROM Activity a WHERE a.time >= :now GROUP BY a.city")
-    List<Object[]> getCityActivityStats(@Param("now") LocalDateTime now);
+    @Query("SELECT a.city, COUNT(a), SUM(a.currentParticipants), SUM(a.views) FROM Activity a GROUP BY a.city")
+    List<Object[]> getCityActivityStats();
 
     @Query("SELECT a FROM Activity a WHERE a.city = :city AND a.time >= :startTime AND a.time <= :endTime ORDER BY a.time ASC")
     List<Activity> findActivitiesStartingBetween(

@@ -3,6 +3,7 @@ package com.example.cityactivity.service;
 import com.example.cityactivity.dto.response.ActivityTrajectoryDTO;
 import com.example.cityactivity.dto.response.CityActivityScoreDTO;
 import com.example.cityactivity.dto.response.CityHotSnapshotDTO;
+import com.example.cityactivity.dto.response.HotSnapshotDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,4 +41,6 @@ public interface ActivitySnapshotService {
     void createPrioritySnapshots();
 
     boolean needsRefresh(String city);
+
+    List<HotSnapshotDTO> getGlobalHotActivities(int limit);
 }
