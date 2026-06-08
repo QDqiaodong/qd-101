@@ -3,8 +3,11 @@ package com.example.cityactivity.controller;
 import com.example.cityactivity.dto.request.RegistrationRequest;
 import com.example.cityactivity.dto.response.ActivityResponse;
 import com.example.cityactivity.dto.response.ApiResponse;
+import com.example.cityactivity.dto.response.AttendanceStatsDTO;
 import com.example.cityactivity.dto.response.RegistrationStatusDTO;
+import com.example.cityactivity.dto.response.RegistrationUserResponse;
 import com.example.cityactivity.dto.response.WaitlistUserResponse;
+import com.example.cityactivity.entity.AttendanceStatus;
 import com.example.cityactivity.service.RegistrationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -76,5 +79,26 @@ public class RegistrationController {
     public ResponseEntity<ApiResponse<List<ActivityResponse>>> getRegisteredActivities(@PathVariable Long userId) {
         List<ActivityResponse> activities = registrationService.getRegisteredActivities(userId);
         return ResponseEntity.ok(ApiResponse.success(activities));
+    }
+    
+    @PostMapping("/attendance/confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmAttendance(
+            @RequestParam Long activityId,
+            @RequestParam Long userId,
+            @RequestParam AttendanceStatus status) {
+        registrationService.confirmAttendance(activityId, userId, status);
+        return ResponseEntity.ok(ApiResponse.success("Attendance confirmation updated", null));
+    }
+    
+    @GetMapping("/attendance/stats/{activityId}")
+    public ResponseEntity<ApiResponse<AttendanceStatsDTO>> getAttendanceStats(@PathVariable Long activityId) {
+        AttendanceStatsDTO stats = registrationService.getAttendanceStats(activityId);
+        return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+    
+    @GetMapping("/attendance/list/{activityId}")
+    public ResponseEntity<ApiResponse<List<RegistrationUserResponse>>> getConfirmedRegistrations(@PathVariable Long activityId) {
+        List<RegistrationUserResponse> registrations = registrationService.getConfirmedRegistrations(activityId);
+        return ResponseEntity.ok(ApiResponse.success(registrations));
     }
 }

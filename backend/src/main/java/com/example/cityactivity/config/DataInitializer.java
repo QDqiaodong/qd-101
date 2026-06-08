@@ -1,13 +1,17 @@
 package com.example.cityactivity.config;
 
 import com.example.cityactivity.entity.Activity;
+import com.example.cityactivity.entity.AttendanceStatus;
 import com.example.cityactivity.entity.BuddyRequest;
 import com.example.cityactivity.entity.Comment;
+import com.example.cityactivity.entity.Registration;
+import com.example.cityactivity.entity.RegistrationStatus;
 import com.example.cityactivity.entity.User;
 import com.example.cityactivity.enums.BuddyRequestStatus;
 import com.example.cityactivity.repository.ActivityRepository;
 import com.example.cityactivity.repository.BuddyRequestRepository;
 import com.example.cityactivity.repository.CommentRepository;
+import com.example.cityactivity.repository.RegistrationRepository;
 import com.example.cityactivity.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +31,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ActivityRepository activityRepository;
     private final BuddyRequestRepository buddyRequestRepository;
     private final CommentRepository commentRepository;
+    private final RegistrationRepository registrationRepository;
     
     @Override
     public void run(String... args) {
@@ -115,6 +120,11 @@ public class DataInitializer implements CommandLineRunner {
         if (commentRepository.count() == 0 && activityRepository.count() > 0 && users.size() >= 3) {
             createSampleComments(users);
             log.info("Initial comments created");
+        }
+
+        if (registrationRepository.count() == 0 && activityRepository.count() > 0 && users.size() >= 3) {
+            createSampleRegistrations(users);
+            log.info("Initial registrations created");
         }
     }
     
@@ -484,5 +494,73 @@ public class DataInitializer implements CommandLineRunner {
                 .createdAt(LocalDateTime.now().minusMinutes(30))
                 .build();
         commentRepository.save(generalComment);
+    }
+
+    private void createSampleRegistrations(List<User> users) {
+        List<Activity> activities = activityRepository.findAll();
+        if (activities.isEmpty()) return;
+
+        Activity firstActivity = activities.get(0);
+        User user1 = users.get(0);
+        User user2 = users.size() > 1 ? users.get(1) : user1;
+        User user3 = users.size() > 2 ? users.get(2) : user1;
+        User user4 = users.size() > 3 ? users.get(3) : user1;
+        User user5 = users.size() > 4 ? users.get(4) : user1;
+        User user6 = users.size() > 5 ? users.get(5) : user1;
+
+        Registration reg1 = Registration.builder()
+                .activity(firstActivity)
+                .user(user1)
+                .registeredAt(LocalDateTime.now().minusDays(2))
+                .cancelled(false)
+                .status(RegistrationStatus.CONFIRMED)
+                .attendanceStatus(AttendanceStatus.CONFIRMED)
+                .attendanceConfirmedAt(LocalDateTime.now().minusHours(2))
+                .build();
+        registrationRepository.save(reg1);
+
+        Registration reg2 = Registration.builder()
+                .activity(firstActivity)
+                .user(user3)
+                .registeredAt(LocalDateTime.now().minusDays(1))
+                .cancelled(false)
+                .status(RegistrationStatus.CONFIRMED)
+                .attendanceStatus(AttendanceStatus.DECLINED)
+                .attendanceConfirmedAt(LocalDateTime.now().minusHours(5))
+                .build();
+        registrationRepository.save(reg2);
+
+        Registration reg3 = Registration.builder()
+                .activity(firstActivity)
+                .user(user4)
+                .registeredAt(LocalDateTime.now().minusDays(1))
+                .cancelled(false)
+                .status(RegistrationStatus.CONFIRMED)
+                .attendanceStatus(AttendanceStatus.PENDING)
+                .build();
+        registrationRepository.save(reg3);
+
+        Registration reg4 = Registration.builder()
+                .activity(firstActivity)
+                .user(user5)
+                .registeredAt(LocalDateTime.now().minusHours(12))
+                .cancelled(false)
+                .status(RegistrationStatus.CONFIRMED)
+                .attendanceStatus(AttendanceStatus.CONFIRMED)
+                .attendanceConfirmedAt(LocalDateTime.now().minusHours(1))
+                .build();
+        registrationRepository.save(reg4);
+
+        Registration reg5 = Registration.builder()
+                .activity(firstActivity)
+                .user(user6)
+                .registeredAt(LocalDateTime.now().minusHours(6))
+                .cancelled(false)
+                .status(RegistrationStatus.CONFIRMED)
+                .attendanceStatus(AttendanceStatus.PENDING)
+                .build();
+        registrationRepository.save(reg5);
+
+        log.info("Created 5 sample registrations for activity {}", firstActivity.getId());
     }
 }

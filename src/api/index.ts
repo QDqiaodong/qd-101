@@ -20,9 +20,28 @@ export interface Activity {
   creatorId: number
   creatorName: string
   waitlistCount?: number
+  attendanceStats?: AttendanceStats
 }
 
 export type RegistrationStatus = 'CONFIRMED' | 'WAITLISTED' | 'CANCELLED' | 'NOT_REGISTERED'
+export type AttendanceStatus = 'PENDING' | 'CONFIRMED' | 'DECLINED'
+
+export interface AttendanceStats {
+  totalConfirmed: number
+  attendanceConfirmed: number
+  attendancePending: number
+  attendanceDeclined: number
+}
+
+export interface RegistrationUser {
+  userId: number
+  userName: string
+  userAvatar: string
+  registeredAt: string
+  attendanceStatus: AttendanceStatus
+  attendanceConfirmedAt?: string
+  waitlistPosition?: number
+}
 
 export interface WaitlistUser {
   userId: number
@@ -267,6 +286,54 @@ export async function getRegisteredActivities(userId: number): Promise<Activity[
     return mockActivities
       .filter(a => registeredIds.includes(a.id))
       .map(convertMockActivity)
+  }
+}
+
+export async function confirmAttendance(
+  activityId: number,
+  userId: number,
+  status: AttendanceStatus
+): Promise<void> {
+  const response = await fetch(
+    `${BASE_URL}/registrations/attendance/confirm?activityId=${activityId}&userId=${userId}&status=${status}`,
+    { method: 'POST' }
+  )
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: '操作失败' }))
+    throw new Error(errorData.message || `HTTP ${response.status}`)
+  }
+
+  const result: ApiResponse<void> = await response.json()
+  if (result.code !== 200) {
+    throw new Error(result.message || '操作失败')
+  }
+}
+
+export async function getAttendanceStats(activityId: number): Promise<AttendanceStats> {
+  try {
+    const response = await fetch(`${BASE_URL}/registrations/attendance/stats/${activityId}`)
+    const result: ApiResponse<AttendanceStats> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for attendance stats')
+    return {
+      totalConfirmed: 5,
+      attendanceConfirmed: 2,
+      attendancePending: 2,
+      attendanceDeclined: 1,
+    }
+  }
+}
+
+export async function getConfirmedRegistrations(activityId: number): Promise<RegistrationUser[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/registrations/attendance/list/${activityId}`)
+    const result: ApiResponse<RegistrationUser[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for confirmed registrations')
+    return []
   }
 }
 

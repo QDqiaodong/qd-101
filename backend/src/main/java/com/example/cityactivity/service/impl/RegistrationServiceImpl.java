@@ -2,9 +2,12 @@ package com.example.cityactivity.service.impl;
 
 import com.example.cityactivity.dto.request.RegistrationRequest;
 import com.example.cityactivity.dto.response.ActivityResponse;
+import com.example.cityactivity.dto.response.AttendanceStatsDTO;
 import com.example.cityactivity.dto.response.RegistrationStatusDTO;
+import com.example.cityactivity.dto.response.RegistrationUserResponse;
 import com.example.cityactivity.dto.response.WaitlistUserResponse;
 import com.example.cityactivity.entity.Activity;
+import com.example.cityactivity.entity.AttendanceStatus;
 import com.example.cityactivity.entity.Registration;
 import com.example.cityactivity.entity.RegistrationStatus;
 import com.example.cityactivity.entity.User;
@@ -246,6 +249,21 @@ public class RegistrationServiceImpl implements RegistrationService {
                     Activity a = r.getActivity();
                     Integer waitlistCount = (int) registrationRepository.countByActivityIdAndStatus(
                             a.getId(), RegistrationStatus.WAITLISTED);
+                    
+                    long attendanceConfirmed = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                            a.getId(), RegistrationStatus.CONFIRMED, AttendanceStatus.CONFIRMED);
+                    long attendancePending = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                            a.getId(), RegistrationStatus.CONFIRMED, AttendanceStatus.PENDING);
+                    long attendanceDeclined = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                            a.getId(), RegistrationStatus.CONFIRMED, AttendanceStatus.DECLINED);
+                    
+                    AttendanceStatsDTO attendanceStats = AttendanceStatsDTO.builder()
+                            .totalConfirmed(a.getCurrentParticipants())
+                            .attendanceConfirmed((int) attendanceConfirmed)
+                            .attendancePending((int) attendancePending)
+                            .attendanceDeclined((int) attendanceDeclined)
+                            .build();
+                    
                     return ActivityResponse.builder()
                             .id(a.getId())
                             .title(a.getTitle())
@@ -263,8 +281,74 @@ public class RegistrationServiceImpl implements RegistrationService {
                             .creatorId(a.getCreator().getId())
                             .creatorName(a.getCreator().getName())
                             .waitlistCount(waitlistCount)
+                            .attendanceStats(attendanceStats)
                             .build();
                 })
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional
+    @CacheEvict(value = {"activities", "hot_activities", "activity_detail", "user_registrations"}, allEntries = true)
+    public void confirmAttendance(Long activityId, Long userId, AttendanceStatus status) {
+        Optional<Registration> registrationOpt = registrationRepository.findByActivityIdAndUserIdAndStatus(
+                activityId, userId, RegistrationStatus.CONFIRMED);
+        
+        if (registrationOpt.isEmpty()) {
+            registrationOpt = registrationRepository.findByActivityIdAndUserIdAndStatus(
+                    activityId, userId, RegistrationStatus.WAITLISTED);
+        }
+        
+        if (registrationOpt.isEmpty()) {
+            throw new BusinessException("未找到报名记录");
+        }
+        
+        Registration registration = registrationOpt.get();
+        registration.setAttendanceStatus(status);
+        registration.setAttendanceConfirmedAt(LocalDateTime.now());
+        registrationRepository.save(registration);
+        
+        log.info("User {} updated attendance status to {} for activity {}", 
+                userId, status, activityId);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public AttendanceStatsDTO getAttendanceStats(Long activityId) {
+        long confirmed = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                activityId, RegistrationStatus.CONFIRMED, AttendanceStatus.CONFIRMED);
+        long pending = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                activityId, RegistrationStatus.CONFIRMED, AttendanceStatus.PENDING);
+        long declined = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                activityId, RegistrationStatus.CONFIRMED, AttendanceStatus.DECLINED);
+        
+        long totalConfirmed = registrationRepository.countByActivityIdAndStatus(
+                activityId, RegistrationStatus.CONFIRMED);
+        
+        return AttendanceStatsDTO.builder()
+                .totalConfirmed((int) totalConfirmed)
+                .attendanceConfirmed((int) confirmed)
+                .attendancePending((int) pending)
+                .attendanceDeclined((int) declined)
+                .build();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<RegistrationUserResponse> getConfirmedRegistrations(Long activityId) {
+        List<Registration> registrations = registrationRepository
+                .findByActivityIdAndStatusOrderByWaitlistPositionAsc(activityId, RegistrationStatus.CONFIRMED);
+        
+        return registrations.stream()
+                .map(r -> RegistrationUserResponse.builder()
+                        .userId(r.getUser().getId())
+                        .userName(r.getUser().getName())
+                        .userAvatar(r.getUser().getAvatar())
+                        .registeredAt(r.getRegisteredAt())
+                        .attendanceStatus(r.getAttendanceStatus())
+                        .attendanceConfirmedAt(r.getAttendanceConfirmedAt())
+                        .waitlistPosition(r.getWaitlistPosition())
+                        .build())
                 .collect(Collectors.toList());
     }
 }

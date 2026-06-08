@@ -3,9 +3,11 @@ package com.example.cityactivity.service.impl;
 import com.example.cityactivity.dto.request.ActivityCapacityUpdateRequest;
 import com.example.cityactivity.dto.request.ActivityCreateRequest;
 import com.example.cityactivity.dto.response.ActivityResponse;
+import com.example.cityactivity.dto.response.AttendanceStatsDTO;
 import com.example.cityactivity.dto.response.CityHotSnapshotDTO;
 import com.example.cityactivity.dto.response.HotSnapshotDTO;
 import com.example.cityactivity.entity.Activity;
+import com.example.cityactivity.entity.AttendanceStatus;
 import com.example.cityactivity.entity.RegistrationStatus;
 import com.example.cityactivity.entity.User;
 import com.example.cityactivity.exception.ResourceNotFoundException;
@@ -381,6 +383,21 @@ public class ActivityServiceImpl implements ActivityService {
     private ActivityResponse toResponse(Activity activity) {
         Integer waitlistCount = (int) registrationRepository.countByActivityIdAndStatus(
                 activity.getId(), RegistrationStatus.WAITLISTED);
+        
+        long attendanceConfirmed = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                activity.getId(), RegistrationStatus.CONFIRMED, AttendanceStatus.CONFIRMED);
+        long attendancePending = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                activity.getId(), RegistrationStatus.CONFIRMED, AttendanceStatus.PENDING);
+        long attendanceDeclined = registrationRepository.countByActivityIdAndStatusAndAttendanceStatus(
+                activity.getId(), RegistrationStatus.CONFIRMED, AttendanceStatus.DECLINED);
+        
+        AttendanceStatsDTO attendanceStats = AttendanceStatsDTO.builder()
+                .totalConfirmed(activity.getCurrentParticipants())
+                .attendanceConfirmed((int) attendanceConfirmed)
+                .attendancePending((int) attendancePending)
+                .attendanceDeclined((int) attendanceDeclined)
+                .build();
+        
         return ActivityResponse.builder()
                 .id(activity.getId())
                 .title(activity.getTitle())
@@ -398,6 +415,7 @@ public class ActivityServiceImpl implements ActivityService {
                 .creatorId(activity.getCreator().getId())
                 .creatorName(activity.getCreator().getName())
                 .waitlistCount(waitlistCount)
+                .attendanceStats(attendanceStats)
                 .build();
     }
 }

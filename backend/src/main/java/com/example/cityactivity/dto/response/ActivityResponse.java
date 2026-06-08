@@ -29,4 +29,5 @@ public class ActivityResponse {
     private Long creatorId;
     private String creatorName;
     private Integer waitlistCount;
+    private AttendanceStatsDTO attendanceStats;
 }

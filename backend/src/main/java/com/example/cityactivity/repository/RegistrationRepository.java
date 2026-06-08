@@ -1,5 +1,6 @@
 package com.example.cityactivity.repository;
 
+import com.example.cityactivity.entity.AttendanceStatus;
 import com.example.cityactivity.entity.Registration;
 import com.example.cityactivity.entity.RegistrationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -42,4 +43,8 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     @Modifying
     @Query("UPDATE Registration r SET r.waitlistPosition = r.waitlistPosition - 1 WHERE r.activity.id = :activityId AND r.status = :status AND r.waitlistPosition > :position")
     void decrementWaitlistPositionsAfter(@Param("activityId") Long activityId, @Param("status") RegistrationStatus status, @Param("position") Integer position);
+    
+    List<Registration> findByActivityIdAndStatusAndAttendanceStatus(Long activityId, RegistrationStatus status, AttendanceStatus attendanceStatus);
+    
+    long countByActivityIdAndStatusAndAttendanceStatus(Long activityId, RegistrationStatus status, AttendanceStatus attendanceStatus);
 }

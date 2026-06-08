@@ -43,4 +43,11 @@ public class Registration {
     private RegistrationStatus status = RegistrationStatus.CONFIRMED;
     
     private Integer waitlistPosition;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AttendanceStatus attendanceStatus = AttendanceStatus.PENDING;
+    
+    private LocalDateTime attendanceConfirmedAt;
 }

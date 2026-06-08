@@ -15,12 +15,16 @@ import {
   getCommentCategoryStats,
   createComment,
   likeComment,
+  confirmAttendance,
+  getConfirmedRegistrations,
   COMMENT_CATEGORIES,
   type Activity,
   type RegistrationStatus as RegStatus,
   type WaitlistUser,
   type Comment,
-  type CommentCategoryStats
+  type CommentCategoryStats,
+  type AttendanceStatus,
+  type RegistrationUser,
 } from '@/api/index'
 import { matchDistrictByLocation } from '@/data/locationData'
 
@@ -41,6 +45,9 @@ const loading = ref(true)
 const registeredActivities = ref<Activity[]>([])
 const showConflictWarning = ref(false)
 const showCloseTimeWarning = ref(false)
+
+const confirmedUsers = ref<RegistrationUser[]>([])
+const myAttendanceStatus = ref<AttendanceStatus>('PENDING')
 
 const activeCommentTab = ref<'all' | 'qa'>('all')
 const selectedCategory = ref<string>('')
@@ -164,6 +171,13 @@ async function loadActivity() {
     isFull.value = activity.value.currentParticipants >= activity.value.maxParticipants
     isCreator.value = activity.value.creatorId === CURRENT_USER_ID
     registeredActivities.value = await getRegisteredActivities(CURRENT_USER_ID)
+    confirmedUsers.value = await getConfirmedRegistrations(activityId)
+    
+    const myReg = confirmedUsers.value.find(u => u.userId === CURRENT_USER_ID)
+    if (myReg) {
+      myAttendanceStatus.value = myReg.attendanceStatus
+    }
+    
     await loadComments()
     await loadCommentStats()
   } catch (error) {
@@ -315,6 +329,49 @@ const handleCancel = async () => {
     const message = error instanceof Error ? error.message : '取消报名失败，请稍后重试'
     alert(message)
   }
+}
+
+const handleConfirmAttendance = async () => {
+  try {
+    await confirmAttendance(activityId, CURRENT_USER_ID, 'CONFIRMED')
+    alert('已确认出席！')
+    await loadActivity()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '操作失败，请稍后重试'
+    alert(message)
+  }
+}
+
+const handleDeclineAttendance = async () => {
+  if (!confirm('确定确认不出席吗？这将帮助组织者提前调整安排。')) {
+    return
+  }
+  try {
+    await confirmAttendance(activityId, CURRENT_USER_ID, 'DECLINED')
+    alert('已提交不出席确认')
+    await loadActivity()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '操作失败，请稍后重试'
+    alert(message)
+  }
+}
+
+const getAttendanceStatusText = (status: AttendanceStatus) => {
+  const texts: Record<AttendanceStatus, string> = {
+    PENDING: '待确认',
+    CONFIRMED: '确认出席',
+    DECLINED: '确认不出席',
+  }
+  return texts[status]
+}
+
+const getAttendanceStatusClass = (status: AttendanceStatus) => {
+  const classes: Record<AttendanceStatus, string> = {
+    PENDING: 'bg-yellow-100 text-yellow-700',
+    CONFIRMED: 'bg-green-100 text-green-700',
+    DECLINED: 'bg-red-100 text-red-700',
+  }
+  return classes[status]
 }
 
 onMounted(() => {
@@ -485,6 +542,104 @@ onMounted(() => {
                     <span class="text-gray-700">{{ user.userName }}</span>
                     <span v-if="index === 0" class="ml-auto text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
                       下一位补位
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="regStatus === 'CONFIRMED' || isCreator" class="mt-6">
+              <h2 class="text-lg font-semibold text-gray-900 mb-3">
+                出席确认
+                <span class="text-sm font-normal text-gray-500 ml-2">
+                  活动开始前确认是否到场，提前暴露掉队风险
+                </span>
+              </h2>
+              
+              <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-green-50 rounded-xl p-4 text-center">
+                  <p class="text-2xl font-bold text-green-600">{{ activity.attendanceStats?.attendanceConfirmed || 0 }}</p>
+                  <p class="text-sm text-green-700 mt-1">确认出席</p>
+                </div>
+                <div class="bg-yellow-50 rounded-xl p-4 text-center">
+                  <p class="text-2xl font-bold text-yellow-600">{{ activity.attendanceStats?.attendancePending || 0 }}</p>
+                  <p class="text-sm text-yellow-700 mt-1">待确认</p>
+                </div>
+                <div class="bg-red-50 rounded-xl p-4 text-center">
+                  <p class="text-2xl font-bold text-red-500">{{ activity.attendanceStats?.attendanceDeclined || 0 }}</p>
+                  <p class="text-sm text-red-600 mt-1">确认不出席</p>
+                </div>
+              </div>
+
+              <div v-if="regStatus === 'CONFIRMED'" class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-4">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-medium text-gray-800">我的出席状态</p>
+                    <p class="text-sm text-gray-600 mt-1">
+                      请在活动开始前确认您的出席状态，帮助组织者更好地安排活动～
+                    </p>
+                  </div>
+                  <span :class="['px-3 py-1 text-sm font-medium rounded-full', getAttendanceStatusClass(myAttendanceStatus)]">
+                    {{ getAttendanceStatusText(myAttendanceStatus) }}
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="regStatus === 'CONFIRMED'" class="flex gap-3 mb-6">
+                <button
+                  @click="handleConfirmAttendance"
+                  :class="[
+                    'flex-1 py-3 rounded-xl font-medium transition-all',
+                    myAttendanceStatus === 'CONFIRMED'
+                      ? 'bg-green-500 text-white shadow-md'
+                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  ]"
+                >
+                  ✓ 确认出席
+                </button>
+                <button
+                  @click="handleDeclineAttendance"
+                  :class="[
+                    'flex-1 py-3 rounded-xl font-medium transition-all',
+                    myAttendanceStatus === 'DECLINED'
+                      ? 'bg-red-500 text-white shadow-md'
+                      : 'bg-red-100 text-red-700 hover:bg-red-200'
+                  ]"
+                >
+                  ✗ 确认不出席
+                </button>
+              </div>
+
+              <div v-if="confirmedUsers.length > 0" class="bg-gray-50 rounded-xl p-4">
+                <h3 class="font-medium text-gray-800 mb-3">
+                  报名名单 
+                  <span class="text-sm font-normal text-gray-500">({{ confirmedUsers.length }}人)</span>
+                </h3>
+                <div class="space-y-2">
+                  <div 
+                    v-for="user in confirmedUsers" 
+                    :key="user.userId"
+                    class="flex items-center gap-3 py-2"
+                  >
+                    <img :src="user.userAvatar" :alt="user.userName" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-gray-800 font-medium">{{ user.userName }}</span>
+                        <span v-if="user.userId === activity.creatorId" class="px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+                          发起人
+                        </span>
+                      </div>
+                      <p class="text-xs text-gray-500">
+                        {{ new Date(user.registeredAt).toLocaleDateString('zh-CN') }} 报名
+                      </p>
+                    </div>
+                    <span :class="['px-2 py-1 text-xs rounded-full', getAttendanceStatusClass(user.attendanceStatus)]">
+                      {{ getAttendanceStatusText(user.attendanceStatus) }}
                     </span>
                   </div>
                 </div>
