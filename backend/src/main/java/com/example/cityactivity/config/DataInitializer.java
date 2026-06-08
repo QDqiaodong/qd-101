@@ -1,8 +1,11 @@
 package com.example.cityactivity.config;
 
 import com.example.cityactivity.entity.Activity;
+import com.example.cityactivity.entity.BuddyRequest;
 import com.example.cityactivity.entity.User;
+import com.example.cityactivity.enums.BuddyRequestStatus;
 import com.example.cityactivity.repository.ActivityRepository;
+import com.example.cityactivity.repository.BuddyRequestRepository;
 import com.example.cityactivity.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
     
     private final UserRepository userRepository;
     private final ActivityRepository activityRepository;
+    private final BuddyRequestRepository buddyRequestRepository;
     
     @Override
     public void run(String... args) {
@@ -98,6 +102,11 @@ public class DataInitializer implements CommandLineRunner {
         if (activityRepository.count() == 0 && users.size() >= 2) {
             createSampleActivities(users);
             log.info("Initial activities created");
+        }
+
+        if (buddyRequestRepository.count() == 0 && users.size() >= 2) {
+            createSampleBuddyRequests(users);
+            log.info("Initial buddy requests created");
         }
     }
     
@@ -242,5 +251,98 @@ public class DataInitializer implements CommandLineRunner {
                 .creator(user2)
                 .build();
         activityRepository.save(activity8);
+    }
+
+    private void createSampleBuddyRequests(List<User> users) {
+        User user1 = users.get(0);
+        User user2 = users.size() > 1 ? users.get(1) : user1;
+        User user3 = users.size() > 2 ? users.get(2) : user1;
+        User user4 = users.size() > 3 ? users.get(3) : user1;
+        User user6 = users.size() > 5 ? users.get(5) : user1;
+        User user7 = users.size() > 6 ? users.get(6) : user1;
+
+        BuddyRequest buddy1 = BuddyRequest.builder()
+                .title("找个饭搭子，一起吃火锅去！")
+                .type("饭搭子")
+                .city("北京")
+                .description("最近想吃火锅，一个人吃太无聊了，找个同样爱吃火锅的小伙伴一起~ 男女不限，AA制。")
+                .targetCount(1)
+                .currentCount(1)
+                .status(BuddyRequestStatus.OPEN)
+                .createdAt(LocalDateTime.now().minusHours(2))
+                .updatedAt(LocalDateTime.now().minusHours(2))
+                .creator(user2)
+                .build();
+        buddyRequestRepository.save(buddy1);
+
+        BuddyRequest buddy2 = BuddyRequest.builder()
+                .title("周末羽毛球搭子，有人一起吗？")
+                .type("球搭子")
+                .city("北京")
+                .description("周末想打羽毛球，水平一般，纯属娱乐健身。找个水平差不多的球友一起打，场地可以商量。")
+                .targetCount(2)
+                .currentCount(1)
+                .status(BuddyRequestStatus.OPEN)
+                .createdAt(LocalDateTime.now().minusHours(5))
+                .updatedAt(LocalDateTime.now().minusHours(5))
+                .creator(user7)
+                .build();
+        buddyRequestRepository.save(buddy2);
+
+        BuddyRequest buddy3 = BuddyRequest.builder()
+                .title("一起探店！寻找城市里的宝藏咖啡馆")
+                .type("探店搭子")
+                .city("北京")
+                .description("喜欢探店拍照，特别是有特色的咖啡馆和小店。周末可以一起去探索，互相拍照~")
+                .targetCount(1)
+                .currentCount(1)
+                .status(BuddyRequestStatus.MATCHING)
+                .createdAt(LocalDateTime.now().minusDays(1))
+                .updatedAt(LocalDateTime.now().minusHours(8))
+                .creator(user6)
+                .build();
+        buddyRequestRepository.save(buddy3);
+
+        BuddyRequest buddy4 = BuddyRequest.builder()
+                .title("健身搭子，互相监督一起瘦！")
+                .type("健身搭子")
+                .city("北京")
+                .description("想找个健身搭子，互相监督打卡。我一般晚上下班后去健身房，有一起的吗？")
+                .targetCount(1)
+                .currentCount(1)
+                .status(BuddyRequestStatus.OPEN)
+                .createdAt(LocalDateTime.now().minusHours(12))
+                .updatedAt(LocalDateTime.now().minusHours(12))
+                .creator(user4)
+                .build();
+        buddyRequestRepository.save(buddy4);
+
+        BuddyRequest buddy5 = BuddyRequest.builder()
+                .title("周末爬山搭子，香山走起~")
+                .type("户外运动")
+                .city("北京")
+                .description("这周末想去香山徒步，有一起的小伙伴吗？路线轻松，主要是锻炼身体呼吸新鲜空气。")
+                .targetCount(3)
+                .currentCount(1)
+                .status(BuddyRequestStatus.OPEN)
+                .createdAt(LocalDateTime.now().minusDays(2))
+                .updatedAt(LocalDateTime.now().minusDays(2))
+                .creator(user3)
+                .build();
+        buddyRequestRepository.save(buddy5);
+
+        BuddyRequest buddy6 = BuddyRequest.builder()
+                .title("找个一起吃晚饭的饭搭子")
+                .type("饭搭子")
+                .city("上海")
+                .description("刚来上海工作，一个人吃饭太寂寞了，找个附近的饭搭子，工作日晚餐可以一起吃~")
+                .targetCount(1)
+                .currentCount(1)
+                .status(BuddyRequestStatus.OPEN)
+                .createdAt(LocalDateTime.now().minusHours(8))
+                .updatedAt(LocalDateTime.now().minusHours(8))
+                .creator(user1)
+                .build();
+        buddyRequestRepository.save(buddy6);
     }
 }
