@@ -338,8 +338,13 @@ public class BuddyServiceImpl implements BuddyService {
             throw new BusinessException("该征集已转换为活动");
         }
 
-        if (buddyRequest.getCurrentCount() < 2) {
-            throw new BusinessException("至少需要2人才能创建活动");
+        if (buddyRequest.getStatus() == BuddyRequestStatus.CLOSED) {
+            throw new BusinessException("该征集已关闭，无法转换为活动");
+        }
+
+        if (buddyRequest.getStatus() != BuddyRequestStatus.MATCHED
+                && buddyRequest.getCurrentCount() < buddyRequest.getTargetCount()) {
+            throw new BusinessException("需达到目标人数或状态为已配对才能转换为正式活动");
         }
 
         StringBuilder descriptionBuilder = new StringBuilder();

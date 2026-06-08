@@ -485,3 +485,574 @@ export async function getUserActivityFootprints(userId: number): Promise<Activit
     return getMockFootprints()
   }
 }
+
+export type BuddyRequestStatus = 'OPEN' | 'MATCHING' | 'MATCHED' | 'CONVERTED' | 'CLOSED'
+export type BuddyApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED'
+
+export interface BuddyRequest {
+  id: number
+  title: string
+  type: string
+  city: string
+  description: string
+  targetCount: number
+  currentCount: number
+  status: BuddyRequestStatus
+  convertedActivityId?: number
+  createdAt: string
+  updatedAt: string
+  creatorId: number
+  creatorName: string
+  creatorAvatar: string
+  applicationCount: number
+}
+
+export interface BuddyApplication {
+  id: number
+  requestId: number
+  requestTitle: string
+  requestType: string
+  requestCity: string
+  applicantId: number
+  applicantName: string
+  applicantAvatar: string
+  message: string
+  status: BuddyApplicationStatus
+  createdAt: string
+  updatedAt: string
+}
+
+const mockBuddyRequests: BuddyRequest[] = [
+  {
+    id: 1,
+    title: '找个饭搭子，一起吃火锅去！',
+    type: '饭搭子',
+    city: '北京',
+    description: '最近想吃火锅，一个人吃太无聊了，找个同样爱吃火锅的小伙伴一起~ 男女不限，AA制。',
+    targetCount: 1,
+    currentCount: 1,
+    status: 'OPEN',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    creatorId: 2,
+    creatorName: '美食探险家小王',
+    creatorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+    applicationCount: 0,
+  },
+  {
+    id: 2,
+    title: '周末羽毛球搭子，有人一起吗？',
+    type: '球搭子',
+    city: '北京',
+    description: '周末想打羽毛球，水平一般，纯属娱乐健身。找个水平差不多的球友一起打，场地可以商量。',
+    targetCount: 2,
+    currentCount: 1,
+    status: 'OPEN',
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    creatorId: 7,
+    creatorName: '羽球小王子',
+    creatorAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop',
+    applicationCount: 1,
+  },
+  {
+    id: 3,
+    title: '一起探店！寻找城市里的宝藏咖啡馆',
+    type: '探店搭子',
+    city: '北京',
+    description: '喜欢探店拍照，特别是有特色的咖啡馆和小店。周末可以一起去探索，互相拍照~',
+    targetCount: 1,
+    currentCount: 1,
+    status: 'MATCHING',
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    creatorId: 6,
+    creatorName: '野餐达人小楠',
+    creatorAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
+    applicationCount: 2,
+  },
+  {
+    id: 4,
+    title: '健身搭子，互相监督一起瘦！',
+    type: '健身搭子',
+    city: '北京',
+    description: '想找个健身搭子，互相监督打卡。我一般晚上下班后去健身房，有一起的吗？',
+    targetCount: 1,
+    currentCount: 1,
+    status: 'OPEN',
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    creatorId: 4,
+    creatorName: '运动达人阿杰',
+    creatorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
+    applicationCount: 0,
+  },
+  {
+    id: 5,
+    title: '周末爬山搭子，香山走起~',
+    type: '户外运动',
+    city: '北京',
+    description: '这周末想去香山徒步，有一起的小伙伴吗？路线轻松，主要是锻炼身体呼吸新鲜空气。',
+    targetCount: 3,
+    currentCount: 1,
+    status: 'OPEN',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    creatorId: 3,
+    creatorName: '户外领队-大山',
+    creatorAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
+    applicationCount: 0,
+  },
+  {
+    id: 6,
+    title: '找个一起吃晚饭的饭搭子',
+    type: '饭搭子',
+    city: '上海',
+    description: '刚来上海工作，一个人吃饭太寂寞了，找个附近的饭搭子，工作日晚餐可以一起吃~',
+    targetCount: 1,
+    currentCount: 1,
+    status: 'OPEN',
+    createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    creatorId: 1,
+    creatorName: '城市探索者',
+    creatorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+    applicationCount: 0,
+  },
+]
+
+const mockBuddyApplications: BuddyApplication[] = [
+  {
+    id: 1,
+    requestId: 3,
+    requestTitle: '一起探店！寻找城市里的宝藏咖啡馆',
+    requestType: '探店搭子',
+    requestCity: '北京',
+    applicantId: 2,
+    applicantName: '美食探险家小王',
+    applicantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+    message: '我也特别喜欢探店咖啡馆！我知道几家超有特色的小众店，可以一起去~',
+    status: 'PENDING',
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 2,
+    requestId: 3,
+    requestTitle: '一起探店！寻找城市里的宝藏咖啡馆',
+    requestType: '探店搭子',
+    requestCity: '北京',
+    applicantId: 5,
+    applicantName: '桌游女王Luna',
+    applicantAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
+    message: '周末有空，可以一起去！',
+    status: 'PENDING',
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+]
+
+export async function getBuddyRequests(
+  city?: string,
+  type?: string,
+  status?: string,
+  sortBy: string = 'newest'
+): Promise<BuddyRequest[]> {
+  try {
+    const params = new URLSearchParams()
+    if (city) params.set('city', city)
+    if (type) params.set('type', type)
+    if (status) params.set('status', status)
+    params.set('sortBy', sortBy)
+
+    const response = await fetch(`${BASE_URL}/buddies/requests?${params}`)
+    const result: ApiResponse<BuddyRequest[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for buddy requests')
+    let result = [...mockBuddyRequests]
+    if (city) result = result.filter(r => r.city === city)
+    if (type) result = result.filter(r => r.type === type)
+    if (status) result = result.filter(r => r.status === status)
+    if (sortBy === 'popular') {
+      result.sort((a, b) => b.currentCount - a.currentCount)
+    } else {
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }
+    return result
+  }
+}
+
+export async function getBuddyRequestById(id: number): Promise<BuddyRequest> {
+  try {
+    const response = await fetch(`${BASE_URL}/buddies/requests/${id}`)
+    const result: ApiResponse<BuddyRequest> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for buddy request detail')
+    const mock = mockBuddyRequests.find(r => r.id === id) || mockBuddyRequests[0]
+    return { ...mock }
+  }
+}
+
+export async function getBuddyRequestsByCreator(creatorId: number): Promise<BuddyRequest[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/buddies/requests/creator/${creatorId}`)
+    const result: ApiResponse<BuddyRequest[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for creator buddy requests')
+    return mockBuddyRequests.filter(r => r.creatorId === creatorId)
+  }
+}
+
+export async function getBuddyRecommendations(
+  userId: number,
+  city?: string
+): Promise<BuddyRequest[]> {
+  try {
+    const params = new URLSearchParams()
+    params.set('userId', String(userId))
+    if (city) params.set('city', city)
+
+    const response = await fetch(`${BASE_URL}/buddies/recommendations?${params}`)
+    const result: ApiResponse<BuddyRequest[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for buddy recommendations')
+    return mockBuddyRequests
+      .filter(r => r.creatorId !== userId)
+      .filter(r => r.status === 'OPEN' || r.status === 'MATCHING')
+      .slice(0, 5)
+  }
+}
+
+export async function createBuddyRequest(data: {
+  title: string
+  type: string
+  city: string
+  description: string
+  targetCount: number
+  creatorId: number
+}): Promise<BuddyRequest> {
+  try {
+    const response = await fetch(`${BASE_URL}/buddies/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '发布失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<BuddyRequest> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '发布失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    const newRequest: BuddyRequest = {
+      id: mockBuddyRequests.length + 1,
+      title: data.title,
+      type: data.type,
+      city: data.city,
+      description: data.description,
+      targetCount: data.targetCount,
+      currentCount: 1,
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      creatorId: data.creatorId,
+      creatorName: '城市探索者',
+      creatorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+      applicationCount: 0,
+    }
+    mockBuddyRequests.unshift(newRequest)
+    return newRequest
+  }
+}
+
+export async function applyForBuddy(data: {
+  requestId: number
+  applicantId: number
+  message: string
+}): Promise<BuddyApplication> {
+  try {
+    const response = await fetch(`${BASE_URL}/buddies/applications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '申请失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<BuddyApplication> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '申请失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    const request = mockBuddyRequests.find(r => r.id === data.requestId)
+    const application: BuddyApplication = {
+      id: mockBuddyApplications.length + 1,
+      requestId: data.requestId,
+      requestTitle: request?.title || '',
+      requestType: request?.type || '',
+      requestCity: request?.city || '',
+      applicantId: data.applicantId,
+      applicantName: '城市探索者',
+      applicantAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+      message: data.message,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    mockBuddyApplications.push(application)
+    if (request) {
+      request.applicationCount++
+      if (request.status === 'OPEN') request.status = 'MATCHING'
+    }
+    return application
+  }
+}
+
+export async function getBuddyApplicationsByRequest(requestId: number): Promise<BuddyApplication[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/buddies/applications/request/${requestId}`)
+    const result: ApiResponse<BuddyApplication[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for buddy applications')
+    return mockBuddyApplications.filter(a => a.requestId === requestId)
+  }
+}
+
+export async function getBuddyApplicationsByApplicant(applicantId: number): Promise<BuddyApplication[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/buddies/applications/applicant/${applicantId}`)
+    const result: ApiResponse<BuddyApplication[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for applicant buddy applications')
+    return mockBuddyApplications.filter(a => a.applicantId === applicantId)
+  }
+}
+
+export async function acceptBuddyApplication(
+  applicationId: number,
+  creatorId: number
+): Promise<BuddyApplication> {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/buddies/applications/${applicationId}/accept?creatorId=${creatorId}`,
+      { method: 'POST' }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '操作失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<BuddyApplication> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '操作失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    const app = mockBuddyApplications.find(a => a.id === applicationId)
+    if (app) {
+      app.status = 'ACCEPTED'
+      app.updatedAt = new Date().toISOString()
+      const request = mockBuddyRequests.find(r => r.id === app.requestId)
+      if (request) {
+        request.currentCount++
+        if (request.currentCount >= request.targetCount) {
+          request.status = 'MATCHED'
+        }
+      }
+    }
+    return app!
+  }
+}
+
+export async function rejectBuddyApplication(
+  applicationId: number,
+  creatorId: number,
+  reason?: string
+): Promise<BuddyApplication> {
+  try {
+    const params = new URLSearchParams()
+    params.set('creatorId', String(creatorId))
+    if (reason) params.set('reason', reason)
+
+    const response = await fetch(
+      `${BASE_URL}/buddies/applications/${applicationId}/reject?${params}`,
+      { method: 'POST' }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '操作失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<BuddyApplication> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '操作失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    const app = mockBuddyApplications.find(a => a.id === applicationId)
+    if (app) {
+      app.status = 'REJECTED'
+      app.updatedAt = new Date().toISOString()
+    }
+    return app!
+  }
+}
+
+export async function cancelBuddyApplication(
+  applicationId: number,
+  applicantId: number
+): Promise<BuddyApplication> {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/buddies/applications/${applicationId}/cancel?applicantId=${applicantId}`,
+      { method: 'POST' }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '操作失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<BuddyApplication> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '操作失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    const app = mockBuddyApplications.find(a => a.id === applicationId)
+    if (app) {
+      app.status = 'CANCELLED'
+      app.updatedAt = new Date().toISOString()
+    }
+    return app!
+  }
+}
+
+export async function closeBuddyRequest(
+  requestId: number,
+  creatorId: number
+): Promise<BuddyRequest> {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/buddies/requests/${requestId}/close?creatorId=${creatorId}`,
+      { method: 'POST' }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '操作失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<BuddyRequest> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '操作失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    const request = mockBuddyRequests.find(r => r.id === requestId)
+    if (request) {
+      request.status = 'CLOSED'
+      request.updatedAt = new Date().toISOString()
+    }
+    return request!
+  }
+}
+
+export async function convertBuddyToActivity(data: {
+  requestId: number
+  creatorId: number
+  location: string
+  time: string
+  requirements?: string
+  image?: string
+}): Promise<Activity> {
+  try {
+    const response = await fetch(`${BASE_URL}/buddies/convert`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '转换失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<Activity> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '转换失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    const request = mockBuddyRequests.find(r => r.id === data.requestId)
+    if (!request) throw new Error('征集帖不存在')
+
+    if (request.status !== 'MATCHED' && request.currentCount < request.targetCount) {
+      throw new Error('需达到目标人数或状态为已配对才能转换为正式活动')
+    }
+
+    if (request.status === 'CONVERTED') throw new Error('该征集已转换为活动')
+
+    const newActivity: Activity = {
+      id: 100 + Math.floor(Math.random() * 1000),
+      title: request.title,
+      type: request.type,
+      city: request.city,
+      location: data.location,
+      time: data.time,
+      maxParticipants: request.targetCount,
+      currentParticipants: request.currentCount,
+      description: `【${request.type}搭子活动】\n${request.description}\n\n本活动由搭子征集帖转化而来，已成功配对${request.currentCount}人。`,
+      requirements: data.requirements || '',
+      image: data.image || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=400&h=300&fit=crop',
+      views: 0,
+      createdAt: new Date().toISOString(),
+      creatorId: data.creatorId,
+      creatorName: request.creatorName,
+      waitlistCount: 0,
+    }
+
+    request.status = 'CONVERTED'
+    request.convertedActivityId = newActivity.id
+    request.updatedAt = new Date().toISOString()
+
+    return newActivity
+  }
+}

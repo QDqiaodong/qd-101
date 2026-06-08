@@ -75,6 +75,17 @@ const route = useRoute()
             📋 行前清单
           </button>
           <button
+            @click="router.push('/buddies')"
+            :class="[
+              'px-4 py-2 rounded-lg transition-colors',
+              route.name === 'buddies' || route.name === 'buddy-detail' || route.name === 'buddy-publish'
+                ? 'bg-primary text-white' 
+                : 'text-gray-600 hover:bg-gray-100'
+            ]"
+          >
+            👋 找搭子
+          </button>
+          <button
             @click="router.push('/publish')"
             :class="[
               'px-4 py-2 rounded-lg transition-colors',

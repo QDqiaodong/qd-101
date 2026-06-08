@@ -9,6 +9,9 @@ import NightLife from '@/pages/NightLife.vue'
 import CreatorHall from '@/pages/CreatorHall.vue'
 import CreatorDetail from '@/pages/CreatorDetail.vue'
 import Checklist from '@/pages/Checklist.vue'
+import BuddyList from '@/pages/BuddyList.vue'
+import BuddyDetail from '@/pages/BuddyDetail.vue'
+import BuddyPublish from '@/pages/BuddyPublish.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -55,6 +58,21 @@ const routes: RouteRecordRaw[] = [
     path: '/checklist',
     name: 'checklist',
     component: Checklist,
+  },
+  {
+    path: '/buddies',
+    name: 'buddies',
+    component: BuddyList,
+  },
+  {
+    path: '/buddy/:id',
+    name: 'buddy-detail',
+    component: BuddyDetail,
+  },
+  {
+    path: '/buddies/publish',
+    name: 'buddy-publish',
+    component: BuddyPublish,
   },
 ]
 
