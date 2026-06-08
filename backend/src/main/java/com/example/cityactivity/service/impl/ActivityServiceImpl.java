@@ -10,11 +10,13 @@ import com.example.cityactivity.entity.User;
 import com.example.cityactivity.exception.ResourceNotFoundException;
 import com.example.cityactivity.repository.ActivityRepository;
 import com.example.cityactivity.repository.RegistrationRepository;
+import com.example.cityactivity.dto.response.CapacityRiskCheckResult;
 import com.example.cityactivity.dto.response.ContentReviewResult;
 import com.example.cityactivity.enums.RiskLevel;
 import com.example.cityactivity.exception.BusinessException;
 import com.example.cityactivity.service.ActivityService;
 import com.example.cityactivity.service.ActivitySnapshotService;
+import com.example.cityactivity.service.CapacityRiskService;
 import com.example.cityactivity.service.ContentReviewService;
 import com.example.cityactivity.service.PublishRateLimitService;
 import com.example.cityactivity.service.UserService;
@@ -46,6 +48,7 @@ public class ActivityServiceImpl implements ActivityService {
     private final PublishRateLimitService publishRateLimitService;
     private final ActivitySnapshotService activitySnapshotService;
     private final ContentReviewService contentReviewService;
+    private final CapacityRiskService capacityRiskService;
 
     private static final int SNAPSHOT_FRESHNESS_MINUTES = 30;
     
@@ -65,6 +68,22 @@ public class ActivityServiceImpl implements ActivityService {
             if (reviewResult.getOverallRiskLevel() == RiskLevel.MEDIUM) {
                 throw new BusinessException("内容存在风险，需人工审核：" + reviewResult.getSuggestion());
             }
+        }
+
+        CapacityRiskCheckResult capacityResult = capacityRiskService.checkActivityCapacity(
+                request.getType(), request.getMaxParticipants());
+        if (!capacityResult.isPassed()) {
+            log.warn("Activity capacity risk check failed for type {} with {} participants: {}",
+                    request.getType(), request.getMaxParticipants(), capacityResult.getSuggestion());
+            if (capacityResult.getOverallRiskLevel() == RiskLevel.HIGH) {
+                throw new BusinessException("活动人数不符合风控规则：" + capacityResult.getSuggestion());
+            }
+            if (capacityResult.getOverallRiskLevel() == RiskLevel.MEDIUM) {
+                throw new BusinessException("活动人数超出合理范围，需人工审核：" + capacityResult.getSuggestion());
+            }
+        } else if (capacityResult.getOverallRiskLevel() == RiskLevel.LOW) {
+            log.info("Activity capacity warning for type {} with {} participants: {}",
+                    request.getType(), request.getMaxParticipants(), capacityResult.getSuggestion());
         }
         
         User creator = userService.findById(request.getCreatorId());
