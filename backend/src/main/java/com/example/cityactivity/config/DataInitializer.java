@@ -2,10 +2,12 @@ package com.example.cityactivity.config;
 
 import com.example.cityactivity.entity.Activity;
 import com.example.cityactivity.entity.BuddyRequest;
+import com.example.cityactivity.entity.Comment;
 import com.example.cityactivity.entity.User;
 import com.example.cityactivity.enums.BuddyRequestStatus;
 import com.example.cityactivity.repository.ActivityRepository;
 import com.example.cityactivity.repository.BuddyRequestRepository;
+import com.example.cityactivity.repository.CommentRepository;
 import com.example.cityactivity.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final ActivityRepository activityRepository;
     private final BuddyRequestRepository buddyRequestRepository;
+    private final CommentRepository commentRepository;
     
     @Override
     public void run(String... args) {
@@ -107,6 +110,11 @@ public class DataInitializer implements CommandLineRunner {
         if (buddyRequestRepository.count() == 0 && users.size() >= 2) {
             createSampleBuddyRequests(users);
             log.info("Initial buddy requests created");
+        }
+
+        if (commentRepository.count() == 0 && activityRepository.count() > 0 && users.size() >= 3) {
+            createSampleComments(users);
+            log.info("Initial comments created");
         }
     }
     
@@ -344,5 +352,137 @@ public class DataInitializer implements CommandLineRunner {
                 .creator(user1)
                 .build();
         buddyRequestRepository.save(buddy6);
+    }
+
+    private void createSampleComments(List<User> users) {
+        List<Activity> activities = activityRepository.findAll();
+        if (activities.isEmpty()) return;
+
+        Activity hikingActivity = activities.stream()
+                .filter(a -> "徒步".equals(a.getType()))
+                .findFirst()
+                .orElse(activities.get(0));
+
+        User user1 = users.get(0);
+        User user2 = users.size() > 1 ? users.get(1) : user1;
+        User user3 = users.size() > 2 ? users.get(2) : user1;
+        User user4 = users.size() > 3 ? users.get(3) : user1;
+        User user5 = users.size() > 4 ? users.get(4) : user1;
+        User user6 = users.size() > 5 ? users.get(5) : user1;
+        User user7 = users.size() > 6 ? users.get(6) : user1;
+
+        Comment q1 = Comment.builder()
+                .activity(hikingActivity)
+                .user(user3)
+                .content("请问集合点具体在香山公园东门的哪个位置？有明显的标志物吗？大概需要提前多久到？")
+                .category("MEETING_POINT")
+                .likes(5)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusDays(2))
+                .build();
+        commentRepository.save(q1);
+
+        Comment a1 = Comment.builder()
+                .activity(hikingActivity)
+                .user(hikingActivity.getCreator())
+                .content("东门进去有个大石碑，就在那里集合～建议提前10分钟到，我们会准时出发的！")
+                .parent(q1)
+                .replyToUser(user3)
+                .likes(3)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusDays(2).plusHours(1))
+                .build();
+        commentRepository.save(a1);
+
+        Comment q2 = Comment.builder()
+                .activity(hikingActivity)
+                .user(user5)
+                .content("请问这个活动对新手友好吗？我平时很少运动，会不会跟不上大部队？")
+                .category("BEGINNER_FRIENDLY")
+                .likes(8)
+                .isPinned(true)
+                .createdAt(LocalDateTime.now().minusDays(3))
+                .build();
+        commentRepository.save(q2);
+
+        Comment a2 = Comment.builder()
+                .activity(hikingActivity)
+                .user(hikingActivity.getCreator())
+                .content("完全没问题！这条路线是入门级的，全程都是修好的步道，我们会控制节奏，大家相互照应～")
+                .parent(q2)
+                .replyToUser(user5)
+                .likes(6)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusDays(3).plusHours(2))
+                .build();
+        commentRepository.save(a2);
+
+        Comment a2_2 = Comment.builder()
+                .activity(hikingActivity)
+                .user(user7)
+                .content("我也是新手，上周参加过一次，完全跟得上，领队人超好的！")
+                .parent(q2)
+                .replyToUser(user5)
+                .likes(2)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusDays(3).plusHours(3))
+                .build();
+        commentRepository.save(a2_2);
+
+        Comment q3 = Comment.builder()
+                .activity(hikingActivity)
+                .user(user6)
+                .content("请问费用大概是多少呀？门票是AA还是组织者统一买？")
+                .category("FEE")
+                .likes(4)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusDays(1))
+                .build();
+        commentRepository.save(q3);
+
+        Comment a3 = Comment.builder()
+                .activity(hikingActivity)
+                .user(hikingActivity.getCreator())
+                .content("门票10块钱自己买哈，下山后聚餐AA，人均大概50左右，丰俭由人～")
+                .parent(q3)
+                .replyToUser(user6)
+                .likes(3)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusDays(1).plusMinutes(30))
+                .build();
+        commentRepository.save(a3);
+
+        Comment q4 = Comment.builder()
+                .activity(hikingActivity)
+                .user(user4)
+                .content("需要带什么装备吗？有没有强制要求的？")
+                .category("EQUIPMENT")
+                .likes(3)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusHours(5))
+                .build();
+        commentRepository.save(q4);
+
+        Comment a4 = Comment.builder()
+                .activity(hikingActivity)
+                .user(hikingActivity.getCreator())
+                .content("建议穿舒适的运动鞋，带瓶水就行～有登山杖可以带上，没有也完全没问题。")
+                .parent(q4)
+                .replyToUser(user4)
+                .likes(2)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusHours(4))
+                .build();
+        commentRepository.save(a4);
+
+        Comment generalComment = Comment.builder()
+                .activity(hikingActivity)
+                .user(user2)
+                .content("期待！上次一起徒步超开心的，这次还能认识新朋友～")
+                .likes(1)
+                .isPinned(false)
+                .createdAt(LocalDateTime.now().minusMinutes(30))
+                .build();
+        commentRepository.save(generalComment);
     }
 }

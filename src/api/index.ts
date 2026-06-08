@@ -1056,3 +1056,299 @@ export async function convertBuddyToActivity(data: {
     return newActivity
   }
 }
+
+export interface Comment {
+  id: number
+  activityId: number
+  userId: number
+  userName: string
+  userAvatar: string
+  content: string
+  parentId?: number
+  replyToUserId?: number
+  replyToUserName?: string
+  category?: string
+  likes: number
+  isPinned: boolean
+  createdAt: string
+  replies?: Comment[]
+}
+
+export interface CommentCategoryStats {
+  category: string
+  count: number
+}
+
+export const COMMENT_CATEGORIES = [
+  { key: 'MEETING_POINT', label: '集合点', icon: '📍' },
+  { key: 'FEE', label: '费用', icon: '💰' },
+  { key: 'EQUIPMENT', label: '装备', icon: '🎒' },
+  { key: 'BEGINNER_FRIENDLY', label: '新手友好', icon: '🌱' },
+  { key: 'OTHER', label: '其他', icon: '💬' },
+]
+
+const mockComments: Comment[] = [
+  {
+    id: 1,
+    activityId: 1,
+    userId: 3,
+    userName: '户外爱好者小明',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+    content: '请问集合点具体在香山公园东门的哪个位置？有明显的标志物吗？大概需要提前多久到？',
+    category: 'MEETING_POINT',
+    likes: 5,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    replies: [
+      {
+        id: 2,
+        activityId: 1,
+        userId: 1,
+        userName: '活动发起人',
+        userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+        content: '东门进去有个大石碑，就在那里集合～建议提前10分钟到，我们会准时出发的！',
+        parentId: 1,
+        replyToUserId: 3,
+        replyToUserName: '户外爱好者小明',
+        likes: 3,
+        isPinned: false,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: 3,
+    activityId: 1,
+    userId: 5,
+    userName: '新手小白',
+    userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+    content: '请问这个活动对新手友好吗？我平时很少运动，会不会跟不上大部队？',
+    category: 'BEGINNER_FRIENDLY',
+    likes: 8,
+    isPinned: true,
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    replies: [
+      {
+        id: 4,
+        activityId: 1,
+        userId: 1,
+        userName: '活动发起人',
+        userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+        content: '完全没问题！这条路线是入门级的，全程都是修好的步道，我们会控制节奏，大家相互照应～',
+        parentId: 3,
+        replyToUserId: 5,
+        replyToUserName: '新手小白',
+        likes: 6,
+        isPinned: false,
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 5,
+        activityId: 1,
+        userId: 7,
+        userName: '羽球小王子',
+        userAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop',
+        content: '我也是新手，上周参加过一次，完全跟得上，领队人超好的！',
+        parentId: 3,
+        replyToUserId: 5,
+        replyToUserName: '新手小白',
+        likes: 2,
+        isPinned: false,
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: 6,
+    activityId: 1,
+    userId: 6,
+    userName: '野餐达人小楠',
+    userAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
+    content: '请问费用大概是多少呀？门票是AA还是组织者统一买？',
+    category: 'FEE',
+    likes: 4,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    replies: [
+      {
+        id: 7,
+        activityId: 1,
+        userId: 1,
+        userName: '活动发起人',
+        userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+        content: '门票10块钱自己买哈，下山后聚餐AA，人均大概50左右，丰俭由人～',
+        parentId: 6,
+        replyToUserId: 6,
+        replyToUserName: '野餐达人小楠',
+        likes: 3,
+        isPinned: false,
+        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: 8,
+    activityId: 1,
+    userId: 4,
+    userName: '运动达人阿杰',
+    userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
+    content: '需要带什么装备吗？有没有强制要求的？',
+    category: 'EQUIPMENT',
+    likes: 3,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    replies: [
+      {
+        id: 9,
+        activityId: 1,
+        userId: 1,
+        userName: '活动发起人',
+        userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+        content: '建议穿舒适的运动鞋，带瓶水就行～有登山杖可以带上，没有也完全没问题。',
+        parentId: 8,
+        replyToUserId: 4,
+        replyToUserName: '运动达人阿杰',
+        likes: 2,
+        isPinned: false,
+        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: 10,
+    activityId: 1,
+    userId: 2,
+    userName: '美食探险家小王',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+    content: '期待！上次一起徒步超开心的，这次还能认识新朋友～',
+    likes: 1,
+    isPinned: false,
+    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+  },
+]
+
+export async function getComments(
+  activityId: number,
+  category?: string
+): Promise<Comment[]> {
+  try {
+    const params = new URLSearchParams()
+    if (category) params.set('category', category)
+
+    const response = await fetch(`${BASE_URL}/comments/activity/${activityId}?${params}`)
+    const result: ApiResponse<Comment[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for comments')
+    let comments = [...mockComments].filter(c => c.activityId === activityId)
+    if (category) {
+      comments = comments.filter(c => c.category === category)
+    }
+    return comments
+  }
+}
+
+export async function getCommentCategoryStats(activityId: number): Promise<CommentCategoryStats[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/comments/activity/${activityId}/stats`)
+    const result: ApiResponse<CommentCategoryStats[]> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for comment stats')
+    const stats: Record<string, number> = {}
+    mockComments
+      .filter(c => c.activityId === activityId && c.category)
+      .forEach(c => {
+        const cat = c.category!
+        stats[cat] = (stats[cat] || 0) + 1
+      })
+    return Object.entries(stats).map(([category, count]) => ({ category, count }))
+  }
+}
+
+export async function createComment(data: {
+  activityId: number
+  userId: number
+  content: string
+  parentId?: number
+  replyToUserId?: number
+  category?: string
+}): Promise<Comment> {
+  try {
+    const response = await fetch(`${BASE_URL}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '发布失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<Comment> = await response.json()
+    if (result.code !== 200) {
+      throw new Error(result.message || '发布失败')
+    }
+
+    return result.data
+  } catch (error) {
+    if (error instanceof Error) throw error
+    
+    const newComment: Comment = {
+      id: mockComments.length + 100,
+      activityId: data.activityId,
+      userId: data.userId,
+      userName: '城市探索者',
+      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+      content: data.content,
+      parentId: data.parentId,
+      replyToUserId: data.replyToUserId,
+      category: data.category,
+      likes: 0,
+      isPinned: false,
+      createdAt: new Date().toISOString(),
+    }
+
+    if (data.parentId) {
+      const parent = mockComments.find(c => c.id === data.parentId)
+      if (parent && parent.replies) {
+        parent.replies.push(newComment)
+      }
+    } else {
+      mockComments.unshift(newComment)
+    }
+
+    return newComment
+  }
+}
+
+export async function likeComment(commentId: number, userId: number): Promise<Comment> {
+  try {
+    const response = await fetch(`${BASE_URL}/comments/${commentId}/like?userId=${userId}`, {
+      method: 'POST',
+    })
+    const result: ApiResponse<Comment> = await response.json()
+    return result.data
+  } catch (error) {
+    console.log('Using mock data for like comment')
+    const comment = findCommentById(commentId)
+    if (comment) {
+      comment.likes++
+    }
+    return comment!
+  }
+}
+
+function findCommentById(id: number): Comment | undefined {
+  for (const c of mockComments) {
+    if (c.id === id) return c
+    if (c.replies) {
+      const reply = c.replies.find(r => r.id === id)
+      if (reply) return reply
+    }
+  }
+  return undefined
+}
