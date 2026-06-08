@@ -33,13 +33,27 @@ public class CapacityRiskServiceImpl implements CapacityRiskService {
             return CapacityRiskCheckResult.high(activityType, maxParticipants, issues, "活动人数无效");
         }
 
+        if (maxParticipants == 1) {
+            issues.add(CapacityRiskCheckResult.CapacityRiskIssue.builder()
+                    .code("CAPACITY_SINGLE_PERSON")
+                    .description("单人活动不符合社交活动属性")
+                    .riskLevel(RiskLevel.HIGH)
+                    .ruleDescription("活动至少需要2人参与才有社交意义")
+                    .build());
+            return CapacityRiskCheckResult.high(activityType, maxParticipants, issues,
+                    "单人活动不符合平台社交属性，请增加参与人数");
+        }
+
         if (maxParticipants < rule.getMinNormalParticipants()) {
             issues.add(CapacityRiskCheckResult.CapacityRiskIssue.builder()
                     .code("CAPACITY_TOO_LOW")
                     .description(String.format("人数低于%s活动的合理范围(%d人起)", activityType, rule.getMinNormalParticipants()))
-                    .riskLevel(RiskLevel.LOW)
+                    .riskLevel(RiskLevel.MEDIUM)
                     .ruleDescription(rule.getDescription())
                     .build());
+            return CapacityRiskCheckResult.medium(activityType, maxParticipants, issues,
+                    String.format("活动人数(%d人)低于%s类活动的合理范围(%d人起)，存在数据失真风险。如确为小型活动，请联系平台审核",
+                            maxParticipants, activityType, rule.getMinNormalParticipants()));
         }
 
         if (maxParticipants > rule.getMaxHighRiskParticipants()) {

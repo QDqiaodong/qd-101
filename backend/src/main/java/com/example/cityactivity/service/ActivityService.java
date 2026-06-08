@@ -1,5 +1,6 @@
 package com.example.cityactivity.service;
 
+import com.example.cityactivity.dto.request.ActivityCapacityUpdateRequest;
 import com.example.cityactivity.dto.request.ActivityCreateRequest;
 import com.example.cityactivity.dto.response.ActivityResponse;
 
@@ -7,6 +8,7 @@ import java.util.List;
 
 public interface ActivityService {
     ActivityResponse createActivity(ActivityCreateRequest request);
+    ActivityResponse updateMaxParticipants(ActivityCapacityUpdateRequest request);
     ActivityResponse getActivityById(Long id);
     List<ActivityResponse> getAllActivities(String sortBy);
     List<ActivityResponse> getActivitiesByCity(String city, String sortBy);

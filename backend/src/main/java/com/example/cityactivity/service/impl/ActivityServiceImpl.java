@@ -1,5 +1,6 @@
 package com.example.cityactivity.service.impl;
 
+import com.example.cityactivity.dto.request.ActivityCapacityUpdateRequest;
 import com.example.cityactivity.dto.request.ActivityCreateRequest;
 import com.example.cityactivity.dto.response.ActivityResponse;
 import com.example.cityactivity.dto.response.CityHotSnapshotDTO;
@@ -106,6 +107,46 @@ public class ActivityServiceImpl implements ActivityService {
         
         Activity saved = activityRepository.save(activity);
         log.info("Created activity: {}", saved.getId());
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"activity_detail", "activities", "hot_activities", "user_activities"}, allEntries = true)
+    public ActivityResponse updateMaxParticipants(ActivityCapacityUpdateRequest request) {
+        Activity activity = activityRepository.findById(request.getActivityId())
+                .orElseThrow(() -> new ResourceNotFoundException("Activity", request.getActivityId()));
+
+        if (!activity.getCreator().getId().equals(request.getCreatorId())) {
+            throw new BusinessException("无权限修改该活动");
+        }
+
+        if (activity.getCurrentParticipants() > request.getNewMaxParticipants()) {
+            throw new BusinessException("新的人数上限不能低于当前已报名人数");
+        }
+
+        int oldMax = activity.getMaxParticipants();
+        int newMax = request.getNewMaxParticipants();
+
+        CapacityRiskCheckResult expansionResult = capacityRiskService.checkCapacityExpansion(
+                activity.getType(), oldMax, newMax);
+        if (!expansionResult.isPassed()) {
+            log.warn("Activity capacity expansion check failed for activity {}: {} -> {}",
+                    activity.getId(), oldMax, newMax);
+            if (expansionResult.getOverallRiskLevel() == RiskLevel.HIGH) {
+                throw new BusinessException("活动扩容不符合风控规则：" + expansionResult.getSuggestion());
+            }
+            if (expansionResult.getOverallRiskLevel() == RiskLevel.MEDIUM) {
+                throw new BusinessException("活动扩容超出合理范围，需人工审核：" + expansionResult.getSuggestion());
+            }
+        } else if (expansionResult.getOverallRiskLevel() == RiskLevel.LOW) {
+            log.info("Activity capacity expansion warning for activity {}: {} -> {}",
+                    activity.getId(), oldMax, newMax);
+        }
+
+        activity.setMaxParticipants(newMax);
+        Activity saved = activityRepository.save(activity);
+        log.info("Updated activity {} maxParticipants: {} -> {}", activity.getId(), oldMax, newMax);
         return toResponse(saved);
     }
     

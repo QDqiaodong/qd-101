@@ -1,5 +1,6 @@
 package com.example.cityactivity.controller;
 
+import com.example.cityactivity.dto.request.ActivityCapacityUpdateRequest;
 import com.example.cityactivity.dto.request.ActivityCreateRequest;
 import com.example.cityactivity.dto.response.ActivityResponse;
 import com.example.cityactivity.dto.response.ApiResponse;
@@ -22,6 +23,12 @@ public class ActivityController {
     public ResponseEntity<ApiResponse<ActivityResponse>> createActivity(@Valid @RequestBody ActivityCreateRequest request) {
         ActivityResponse activity = activityService.createActivity(request);
         return ResponseEntity.ok(ApiResponse.success("Activity created", activity));
+    }
+
+    @PutMapping("/capacity")
+    public ResponseEntity<ApiResponse<ActivityResponse>> updateMaxParticipants(@Valid @RequestBody ActivityCapacityUpdateRequest request) {
+        ActivityResponse activity = activityService.updateMaxParticipants(request);
+        return ResponseEntity.ok(ApiResponse.success("Activity capacity updated", activity));
     }
     
     @GetMapping("/{id}")
